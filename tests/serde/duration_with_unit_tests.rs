@@ -41,6 +41,7 @@ fn test_duration_with_unit_deserialize_from_supported_units() {
         ("42ns", Duration::from_nanos(42)),
         ("42us", Duration::from_micros(42)),
         ("42µs", Duration::from_micros(42)),
+        ("42μs", Duration::from_micros(42)),
         ("42ms", Duration::from_millis(42)),
         ("42s", Duration::from_secs(42)),
         ("2m", Duration::from_secs(120)),
@@ -78,6 +79,17 @@ fn test_duration_with_unit_format() {
 }
 
 #[test]
+fn test_duration_with_unit_serialize_uses_datatype_rounding() {
+    let holder = Holder {
+        duration: Duration::from_micros(1500),
+    };
+
+    let json = serde_json::to_string(&holder).expect("duration should serialize");
+
+    assert_eq!(json, r#"{"duration":"2ms"}"#);
+}
+
+#[test]
 fn test_duration_with_unit_parse_rejects_empty_text() {
     let result = duration_with_unit::parse(" ");
 
@@ -108,12 +120,12 @@ fn test_duration_with_unit_parse_errors_and_overflows() {
 
     assert_eq!(
         duration_with_unit::parse("18446744073709551616").unwrap_err(),
-        "duration unit is missing"
+        "Conversion error: Cannot convert '18446744073709551616' to Duration: invalid duration value"
     );
 
     assert_eq!(
         duration_with_unit::parse("x12ms").unwrap_err(),
-        "duration value is missing"
+        "Conversion error: Cannot convert duration string: duration value is missing"
     );
 
     let vm = u64::MAX / 60 + 1;

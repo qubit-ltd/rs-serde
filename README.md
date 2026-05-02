@@ -19,9 +19,8 @@ modules.
 ## Design Goals
 
 - **Focused adapters**: provide small, reusable `#[serde(with = "...")]` modules.
-- **Stable formats**: keep serialized forms predictable across crates.
+- **Shared conversion semantics**: reuse `qubit-datatype` conversion rules for supported scalar formats.
 - **Configuration friendly**: support human-readable duration strings where useful.
-- **Low coupling**: avoid depending on broader Qubit utility crates.
 - **Easy reuse**: make adapters available through a consistent `qubit_serde::serde::*` path.
 
 ## Features
@@ -30,13 +29,14 @@ modules.
 
 - `duration_millis` serializes `std::time::Duration` as a whole millisecond `u64`.
 - Deserialization accepts a non-negative `u64` millisecond count.
-- Serialization saturates at `u64::MAX` milliseconds.
+- Duration-to-millisecond conversion follows `qubit-datatype` rounding and range rules.
 
 ### Duration with Units
 
 - `duration_with_unit` serializes durations as strings such as `500ms`.
-- Deserialization accepts strings with `ns`, `us`, `µs`, `ms`, `s`, `m`, `h`, or `d`.
+- Deserialization accepts strings with `ns`, `us`, `µs`, `μs`, `ms`, `s`, `m`, `h`, or `d`.
 - Bare integer input is accepted as milliseconds for lenient configuration parsing.
+- Duration-to-string conversion follows `qubit-datatype` default duration formatting.
 - Invalid units, invalid numbers, fractional values, and overflows are rejected.
 
 ## Installation
@@ -129,6 +129,7 @@ See [COVERAGE.md](COVERAGE.md) for detailed coverage statistics.
 
 Runtime dependencies:
 
+- `qubit-datatype` for shared duration conversion semantics.
 - `serde` for serialization and deserialization integration.
 - `serde_json` for scalar value handling in lenient duration deserialization.
 
@@ -157,7 +158,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ### Development Guidelines
 
 - Follow the Rust API guidelines.
-- Keep adapters small, documented, and format-stable.
+- Keep adapters small, documented, and aligned with shared conversion semantics.
 - Add tests for success paths, invalid input, and boundary conditions.
 - Run `./ci-check.sh` before submitting PRs.
 

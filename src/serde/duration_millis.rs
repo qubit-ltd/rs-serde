@@ -9,18 +9,21 @@
  ******************************************************************************/
 //! Serde adapter for [`std::time::Duration`] as whole milliseconds.
 //!
-//! Serialization emits a `u64` millisecond value. Deserialization accepts a
-//! `u64` millisecond value and converts it back to [`Duration`].
+//! Serialization emits a rounded `u64` millisecond value. Deserialization
+//! accepts a `u64` millisecond value and converts it back to [`Duration`].
 
 use std::time::Duration;
 
+use qubit_datatype::DataConverter;
+use serde::de::Error as DeserializeError;
+use serde::ser::Error as SerializeError;
 use serde::{
     Deserialize,
     Deserializer,
     Serializer,
 };
 
-/// Serializes a [`Duration`] as a saturated `u64` millisecond count.
+/// Serializes a [`Duration`] as a rounded `u64` millisecond count.
 ///
 /// # Parameters
 /// - `duration`: Duration to serialize.
@@ -30,12 +33,16 @@ use serde::{
 /// The serializer result.
 ///
 /// # Errors
-/// Returns the serializer error if writing the integer value fails.
+/// Returns the serializer error if converting or writing the integer value
+/// fails.
 pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_u64(as_millis_u64(duration))
+    let millis = DataConverter::from(*duration)
+        .to::<u64>()
+        .map_err(S::Error::custom)?;
+    serializer.serialize_u64(millis)
 }
 
 /// Deserializes a [`Duration`] from a `u64` millisecond count.
@@ -47,23 +54,14 @@ where
 /// A [`Duration`] with millisecond precision.
 ///
 /// # Errors
-/// Returns the deserializer error when the input is not a valid `u64`.
+/// Returns the deserializer error when the input is not a valid `u64` or cannot
+/// be converted to [`Duration`].
 pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
 {
     let millis = u64::deserialize(deserializer)?;
-    Ok(Duration::from_millis(millis))
-}
-
-/// Converts a [`Duration`] to a saturated `u64` millisecond count.
-///
-/// # Parameters
-/// - `duration`: Duration to convert.
-///
-/// # Returns
-/// Whole milliseconds, saturated at [`u64::MAX`].
-#[inline]
-pub fn as_millis_u64(duration: &Duration) -> u64 {
-    duration.as_millis().min(u128::from(u64::MAX)) as u64
+    DataConverter::from(millis)
+        .to::<Duration>()
+        .map_err(D::Error::custom)
 }

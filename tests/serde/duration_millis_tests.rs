@@ -34,6 +34,28 @@ fn test_duration_millis_serialize_as_integer() {
 }
 
 #[test]
+fn test_duration_millis_serialize_uses_datatype_rounding() {
+    let holder = Holder {
+        duration: Duration::from_micros(1500),
+    };
+
+    let json = serde_json::to_string(&holder).expect("duration should serialize");
+
+    assert_eq!(json, r#"{"duration":2}"#);
+}
+
+#[test]
+fn test_duration_millis_serialize_rejects_out_of_range_millis() {
+    let holder = Holder {
+        duration: Duration::new(u64::MAX, 999_999_999),
+    };
+
+    let result = serde_json::to_string(&holder);
+
+    assert!(result.is_err());
+}
+
+#[test]
 fn test_duration_millis_deserialize_from_integer() {
     let holder: Holder =
         serde_json::from_str(r#"{"duration":250}"#).expect("duration should deserialize");

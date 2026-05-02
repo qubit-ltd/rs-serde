@@ -9,21 +9,20 @@
  ******************************************************************************/
 //! Serde adapter for [`std::time::Duration`] as a string with a time unit.
 //!
-//! Serialization emits whole milliseconds with an `ms` suffix. Deserialization
-//! accepts strings with `ns`, `us`, `µs`, `ms`, `s`, `m`, `h`, or `d` suffixes,
-//! and also accepts a bare integer as milliseconds for lenient configuration
-//! input.
+//! Serialization emits rounded whole milliseconds with an `ms` suffix.
+//! Deserialization accepts strings with `ns`, `us`, `µs`, `μs`, `ms`, `s`,
+//! `m`, `h`, or `d` suffixes, and also accepts a bare integer as milliseconds
+//! for lenient configuration input.
 
 use std::time::Duration;
 
+use qubit_datatype::DataConverter;
 use serde::de::Error;
 use serde::{
     Deserialize,
     Deserializer,
     Serializer,
 };
-
-use super::duration_millis::as_millis_u64;
 
 /// Serializes a [`Duration`] as a string such as `"500ms"`.
 ///
@@ -40,7 +39,8 @@ pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Erro
 where
     S: Serializer,
 {
-    serializer.serialize_str(&format(duration))
+    let text = format(duration);
+    serializer.serialize_str(&text)
 }
 
 /// Deserializes a [`Duration`] from a string with a unit, or a bare millisecond
@@ -65,7 +65,9 @@ where
             let millis = number
                 .as_u64()
                 .ok_or_else(|| D::Error::custom("duration integer must be a non-negative u64"))?;
-            Ok(Duration::from_millis(millis))
+            DataConverter::from(millis)
+                .to::<Duration>()
+                .map_err(D::Error::custom)
         }
         serde_json::Value::String(text) => parse(&text).map_err(D::Error::custom),
         _ => Err(D::Error::custom(
@@ -74,22 +76,25 @@ where
     }
 }
 
-/// Formats a [`Duration`] as saturated whole milliseconds with an `ms` suffix.
+/// Formats a [`Duration`] using the default [`DataConverter`] duration rules.
 ///
 /// # Parameters
 /// - `duration`: Duration to format.
 ///
 /// # Returns
 /// A string in the form `<millis>ms`.
+///
 #[inline]
 pub fn format(duration: &Duration) -> String {
-    format!("{}ms", as_millis_u64(duration))
+    DataConverter::from(*duration)
+        .to::<String>()
+        .expect("Duration to String conversion should be infallible")
 }
 
 /// Parses a [`Duration`] from a string with a supported unit.
 ///
 /// Bare integers are treated as milliseconds. Supported suffixes are `ns`,
-/// `us`, `µs`, `ms`, `s`, `m`, `h`, and `d`.
+/// `us`, `µs`, `μs`, `ms`, `s`, `m`, `h`, and `d`.
 ///
 /// # Parameters
 /// - `text`: Duration text to parse.
@@ -100,72 +105,7 @@ pub fn format(duration: &Duration) -> String {
 /// # Errors
 /// Returns a message describing invalid syntax, unsupported units, or overflow.
 pub fn parse(text: &str) -> Result<Duration, String> {
-    let trimmed = text.trim();
-    if trimmed.is_empty() {
-        return Err("duration must not be empty".to_string());
-    }
-    if let Ok(millis) = trimmed.parse::<u64>() {
-        return Ok(Duration::from_millis(millis));
-    }
-
-    let (number, unit) = split_number_and_unit(trimmed)?;
-    let value = number.parse::<u64>().map_err(|_| {
-        format!("invalid duration value `{number}`: expected a non-negative integer")
-    })?;
-
-    duration_from_unit(value, unit)
-}
-
-/// Splits duration text into integer and unit parts.
-///
-/// # Parameters
-/// - `text`: Non-empty duration text.
-///
-/// # Returns
-/// A tuple containing the number text and unit text.
-///
-/// # Errors
-/// Returns an error when either part is missing.
-fn split_number_and_unit(text: &str) -> Result<(&str, &str), String> {
-    let split_at = text
-        .find(|ch: char| !ch.is_ascii_digit())
-        .ok_or_else(|| "duration unit is missing".to_string())?;
-    let (number, unit) = text.split_at(split_at);
-    if number.is_empty() {
-        return Err("duration value is missing".to_string());
-    }
-    Ok((number, unit))
-}
-
-/// Converts an integer value and unit suffix to a [`Duration`].
-///
-/// # Parameters
-/// - `value`: Non-negative integer duration value.
-/// - `unit`: Supported unit suffix.
-///
-/// # Returns
-/// The corresponding [`Duration`].
-///
-/// # Errors
-/// Returns an error when the unit is unsupported or the conversion overflows.
-fn duration_from_unit(value: u64, unit: &str) -> Result<Duration, String> {
-    match unit {
-        "ns" => Ok(Duration::from_nanos(value)),
-        "us" | "µs" => Ok(Duration::from_micros(value)),
-        "ms" => Ok(Duration::from_millis(value)),
-        "s" => Ok(Duration::from_secs(value)),
-        "m" => value
-            .checked_mul(60)
-            .map(Duration::from_secs)
-            .ok_or_else(|| "duration minutes overflow u64 seconds".to_string()),
-        "h" => value
-            .checked_mul(60 * 60)
-            .map(Duration::from_secs)
-            .ok_or_else(|| "duration hours overflow u64 seconds".to_string()),
-        "d" => value
-            .checked_mul(24 * 60 * 60)
-            .map(Duration::from_secs)
-            .ok_or_else(|| "duration days overflow u64 seconds".to_string()),
-        _ => Err(format!("unsupported duration unit `{unit}`")),
-    }
+    DataConverter::from(text)
+        .to::<Duration>()
+        .map_err(|error| error.to_string())
 }
