@@ -1,0 +1,32 @@
+[package]
+name = "qubit-serde"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+authors = ["Haixing Hu <starfish.hu@gmail.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/qubit-ltd/rs-serde"
+description = "Reusable serde adapters and helper functions for Rust applications"
+homepage = "https://github.com/qubit-ltd/rs-serde"
+documentation = "https://docs.rs/qubit-serde"
+readme = "README.md"
+keywords = ["serde", "serialization", "utility", "qubit"]
+categories = ["encoding", "development-tools", "rust-patterns"]
+exclude = [
+    "coverage.sh",
+    "COVERAGE.md",
+    "COVERAGE.zh_CN.md",
+    ".circleci/*",
+    "ci-check.sh",
+    ".llvm-cov.toml",
+    ".cargo-audit.toml.example",
+]
+
+[lib]
+name = "qubit_serde"
+doctest = true
+test = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
