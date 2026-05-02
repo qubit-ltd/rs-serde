@@ -29,14 +29,14 @@ modules.
 
 - `duration_millis` serializes `std::time::Duration` as a whole millisecond `u64`.
 - Deserialization accepts a non-negative `u64` millisecond count.
-- Duration-to-millisecond conversion follows `qubit-datatype` rounding and range rules.
+- Duration-to-millisecond conversion uses explicit `qubit-datatype` millisecond options.
 
 ### Duration with Units
 
 - `duration_with_unit` serializes durations as strings such as `500ms`.
 - Deserialization accepts strings with `ns`, `us`, `µs`, `μs`, `ms`, `s`, `m`, `h`, or `d`.
 - Bare integer input is accepted as milliseconds for lenient configuration parsing.
-- Duration-to-string conversion follows `qubit-datatype` default duration formatting.
+- Duration-to-string conversion uses explicit `qubit-datatype` millisecond options.
 - Invalid units, invalid numbers, fractional values, and overflows are rejected.
 
 ## Installation

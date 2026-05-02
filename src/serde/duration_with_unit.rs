@@ -24,6 +24,8 @@ use serde::{
     Serializer,
 };
 
+use super::duration_millis::MILLISECOND_CONVERSION_OPTIONS;
+
 /// Serializes a [`Duration`] as a string such as `"500ms"`.
 ///
 /// # Parameters
@@ -66,7 +68,7 @@ where
                 .as_u64()
                 .ok_or_else(|| D::Error::custom("duration integer must be a non-negative u64"))?;
             DataConverter::from(millis)
-                .to::<Duration>()
+                .to_with::<Duration>(&MILLISECOND_CONVERSION_OPTIONS)
                 .map_err(D::Error::custom)
         }
         serde_json::Value::String(text) => parse(&text).map_err(D::Error::custom),
@@ -76,7 +78,7 @@ where
     }
 }
 
-/// Formats a [`Duration`] using the default [`DataConverter`] duration rules.
+/// Formats a [`Duration`] using explicit millisecond [`DataConverter`] options.
 ///
 /// # Parameters
 /// - `duration`: Duration to format.
@@ -87,7 +89,7 @@ where
 #[inline]
 pub fn format(duration: &Duration) -> String {
     DataConverter::from(*duration)
-        .to::<String>()
+        .to_with::<String>(&MILLISECOND_CONVERSION_OPTIONS)
         .expect("Duration to String conversion should be infallible")
 }
 
@@ -104,8 +106,9 @@ pub fn format(duration: &Duration) -> String {
 ///
 /// # Errors
 /// Returns a message describing invalid syntax, unsupported units, or overflow.
+#[inline]
 pub fn parse(text: &str) -> Result<Duration, String> {
     DataConverter::from(text)
-        .to::<Duration>()
+        .to_with::<Duration>(&MILLISECOND_CONVERSION_OPTIONS)
         .map_err(|error| error.to_string())
 }

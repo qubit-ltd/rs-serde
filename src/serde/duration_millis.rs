@@ -12,9 +12,15 @@
 //! Serialization emits a rounded `u64` millisecond value. Deserialization
 //! accepts a `u64` millisecond value and converts it back to [`Duration`].
 
+use std::sync::LazyLock;
 use std::time::Duration;
 
-use qubit_datatype::DataConverter;
+use qubit_datatype::{
+    DataConversionOptions,
+    DataConverter,
+    DurationConversionOptions,
+    DurationUnit,
+};
 use serde::de::Error as DeserializeError;
 use serde::ser::Error as SerializeError;
 use serde::{
@@ -22,6 +28,16 @@ use serde::{
     Deserializer,
     Serializer,
 };
+
+/// Shared conversion options that pin duration conversion to milliseconds.
+pub(super) static MILLISECOND_CONVERSION_OPTIONS: LazyLock<DataConversionOptions> =
+    LazyLock::new(|| {
+        DataConversionOptions::default().with_duration_options(
+            DurationConversionOptions::default()
+                .with_unit(DurationUnit::Milliseconds)
+                .with_append_unit_suffix(true),
+        )
+    });
 
 /// Serializes a [`Duration`] as a rounded `u64` millisecond count.
 ///
@@ -40,7 +56,7 @@ where
     S: Serializer,
 {
     let millis = DataConverter::from(*duration)
-        .to::<u64>()
+        .to_with::<u64>(&MILLISECOND_CONVERSION_OPTIONS)
         .map_err(S::Error::custom)?;
     serializer.serialize_u64(millis)
 }
@@ -62,6 +78,6 @@ where
 {
     let millis = u64::deserialize(deserializer)?;
     DataConverter::from(millis)
-        .to::<Duration>()
+        .to_with::<Duration>(&MILLISECOND_CONVERSION_OPTIONS)
         .map_err(D::Error::custom)
 }

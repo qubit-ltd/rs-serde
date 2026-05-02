@@ -11,6 +11,12 @@
 
 use std::time::Duration;
 
+use qubit_datatype::{
+    DataConversionOptions,
+    DataConverter,
+    DurationConversionOptions,
+    DurationUnit,
+};
 use qubit_serde::serde::duration_with_unit;
 use serde::{
     Deserialize,
@@ -79,6 +85,21 @@ fn test_duration_with_unit_format() {
 }
 
 #[test]
+fn test_duration_with_unit_format_pins_millisecond_options() {
+    let seconds_options = DataConversionOptions::default().with_duration_options(
+        DurationConversionOptions::default().with_unit(DurationUnit::Seconds),
+    );
+    let seconds: String = DataConverter::from(Duration::from_millis(2500))
+        .to_with(&seconds_options)
+        .expect("duration should format as seconds");
+    assert_eq!(seconds, "3s");
+
+    let text = duration_with_unit::format(&Duration::from_millis(2500));
+
+    assert_eq!(text, "2500ms");
+}
+
+#[test]
 fn test_duration_with_unit_serialize_uses_datatype_rounding() {
     let holder = Holder {
         duration: Duration::from_micros(1500),
@@ -94,6 +115,21 @@ fn test_duration_with_unit_parse_rejects_empty_text() {
     let result = duration_with_unit::parse(" ");
 
     assert!(result.is_err());
+}
+
+#[test]
+fn test_duration_with_unit_parse_pins_millisecond_options_for_bare_numbers() {
+    let seconds_options = DataConversionOptions::default().with_duration_options(
+        DurationConversionOptions::default().with_unit(DurationUnit::Seconds),
+    );
+    let seconds: Duration = DataConverter::from("2")
+        .to_with(&seconds_options)
+        .expect("bare number should parse as seconds");
+    assert_eq!(seconds, Duration::from_secs(2));
+
+    let duration = duration_with_unit::parse("2").expect("duration should parse");
+
+    assert_eq!(duration, Duration::from_millis(2));
 }
 
 #[test]
