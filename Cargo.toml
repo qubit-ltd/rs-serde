@@ -1,6 +1,6 @@
 [package]
 name = "qubit-serde"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 rust-version = "1.94"
 authors = ["Haixing Hu <starfish.hu@gmail.com>"]
@@ -13,11 +13,12 @@ readme = "README.md"
 keywords = ["serde", "serialization", "utility", "qubit"]
 categories = ["encoding", "development-tools", "rust-patterns"]
 exclude = [
-    "coverage.sh",
-    "COVERAGE.md",
-    "COVERAGE.zh_CN.md",
-    ".circleci/*",
+    "align-ci.sh",
     "ci-check.sh",
+    "coverage.sh",
+    "style-check.sh",
+    "update-submodule.sh",
+    ".github/*",
     ".llvm-cov.toml",
     ".cargo-audit.toml.example",
 ]
