@@ -1,7 +1,7 @@
 # Qubit Serde
 
 [![Rust CI](https://github.com/qubit-ltd/rs-serde/actions/workflows/ci.yml/badge.svg)](https://github.com/qubit-ltd/rs-serde/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/qubit-ltd/rs-serde/badge.svg?branch=main)](https://coveralls.io/github/qubit-ltd/rs-serde?branch=main)
+[![Coverage](https://img.shields.io/endpoint?url=https://qubit-ltd.github.io/rs-serde/coverage-badge.json)](https://qubit-ltd.github.io/rs-serde/coverage/)
 [![Crates.io](https://img.shields.io/crates/v/qubit-serde.svg?color=blue)](https://crates.io/crates/qubit-serde)
 [![Rust](https://img.shields.io/badge/rust-1.94+-blue.svg?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -42,7 +42,7 @@ Qubit Serde 收集可在 Rust 库之间复用的小型 serde 适配器。当前�
 
 ```toml
 [dependencies]
-qubit-serde = "0.2"
+qubit-serde = "0.2.3"
 ```
 
 ## 快速开始
