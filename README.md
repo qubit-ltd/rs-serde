@@ -45,7 +45,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-serde = "0.2.3"
+qubit-serde = "0.2"
 ```
 
 ## Quick Start
