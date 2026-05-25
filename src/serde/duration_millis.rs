@@ -30,14 +30,13 @@ use serde::{
 };
 
 /// Shared conversion options that pin duration conversion to milliseconds.
-pub(super) static MILLISECOND_CONVERSION_OPTIONS: LazyLock<DataConversionOptions> =
-    LazyLock::new(|| {
-        DataConversionOptions::default().with_duration_options(
-            DurationConversionOptions::default()
-                .with_unit(DurationUnit::Milliseconds)
-                .with_append_unit_suffix(true),
-        )
-    });
+pub(super) static MILLISECOND_CONVERSION_OPTIONS: LazyLock<DataConversionOptions> = LazyLock::new(|| {
+    DataConversionOptions::default().with_duration_options(
+        DurationConversionOptions::default()
+            .with_unit(DurationUnit::Milliseconds)
+            .with_append_unit_suffix(true),
+    )
+});
 
 /// Serializes a [`Duration`] as a rounded `u64` millisecond count.
 ///
