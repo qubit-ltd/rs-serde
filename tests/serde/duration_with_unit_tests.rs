@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Tests for unit-suffixed duration serde adapter.
 
 use std::time::Duration;
@@ -35,7 +33,8 @@ fn test_duration_with_unit_serialize_as_ms_string() {
         duration: Duration::from_millis(1500),
     };
 
-    let json = serde_json::to_string(&holder).expect("duration should serialize");
+    let json =
+        serde_json::to_string(&holder).expect("duration should serialize");
 
     assert_eq!(json, r#"{"duration":"1500ms"}"#);
 }
@@ -57,21 +56,24 @@ fn test_duration_with_unit_deserialize_from_supported_units() {
 
     for (text, expected) in cases {
         let json = format!(r#"{{"duration":"{text}"}}"#);
-        let holder: Holder = serde_json::from_str(&json).expect("duration should deserialize");
+        let holder: Holder =
+            serde_json::from_str(&json).expect("duration should deserialize");
         assert_eq!(holder.duration, expected);
     }
 }
 
 #[test]
 fn test_duration_with_unit_deserialize_from_integer_millis() {
-    let holder: Holder = serde_json::from_str(r#"{"duration":250}"#).expect("duration should deserialize");
+    let holder: Holder = serde_json::from_str(r#"{"duration":250}"#)
+        .expect("duration should deserialize");
 
     assert_eq!(holder.duration, Duration::from_millis(250));
 }
 
 #[test]
 fn test_duration_with_unit_rejects_invalid_unit() {
-    let result = serde_json::from_str::<Holder>(r#"{"duration":"250fortnights"}"#);
+    let result =
+        serde_json::from_str::<Holder>(r#"{"duration":"250fortnights"}"#);
 
     assert!(result.is_err());
 }
@@ -86,7 +88,10 @@ fn test_duration_with_unit_format() {
 #[test]
 fn test_duration_with_unit_format_pins_millisecond_options() {
     let seconds_options = DataConversionOptions::default()
-        .with_duration_options(DurationConversionOptions::default().with_unit(DurationUnit::Seconds));
+        .with_duration_options(
+            DurationConversionOptions::default()
+                .with_unit(DurationUnit::Seconds),
+        );
     let seconds: String = DataConverter::from(Duration::from_millis(2500))
         .to_with(&seconds_options)
         .expect("duration should format as seconds");
@@ -103,7 +108,8 @@ fn test_duration_with_unit_serialize_uses_datatype_rounding() {
         duration: Duration::from_micros(1500),
     };
 
-    let json = serde_json::to_string(&holder).expect("duration should serialize");
+    let json =
+        serde_json::to_string(&holder).expect("duration should serialize");
 
     assert_eq!(json, r#"{"duration":"2ms"}"#);
 }
@@ -118,13 +124,17 @@ fn test_duration_with_unit_parse_rejects_empty_text() {
 #[test]
 fn test_duration_with_unit_parse_pins_millisecond_options_for_bare_numbers() {
     let seconds_options = DataConversionOptions::default()
-        .with_duration_options(DurationConversionOptions::default().with_unit(DurationUnit::Seconds));
+        .with_duration_options(
+            DurationConversionOptions::default()
+                .with_unit(DurationUnit::Seconds),
+        );
     let seconds: Duration = DataConverter::from("2")
         .to_with(&seconds_options)
         .expect("bare number should parse as seconds");
     assert_eq!(seconds, Duration::from_secs(2));
 
-    let duration = duration_with_unit::parse("2").expect("duration should parse");
+    let duration =
+        duration_with_unit::parse("2").expect("duration should parse");
 
     assert_eq!(duration, Duration::from_millis(2));
 }
@@ -148,7 +158,8 @@ fn test_duration_with_unit_deserialize_rejects_invalid_number_and_non_scalar() {
 
 #[test]
 fn test_duration_with_unit_parse_errors_and_overflows() {
-    let err = duration_with_unit::parse("18446744073709551616000ns").unwrap_err();
+    let err =
+        duration_with_unit::parse("18446744073709551616000ns").unwrap_err();
     assert!(err.contains("invalid duration value"));
 
     assert_eq!(
@@ -185,6 +196,7 @@ fn test_duration_with_unit_parse_errors_and_overflows() {
 fn test_duration_with_unit_serialize_function() {
     let mut buf = Vec::new();
     let mut ser = serde_json::Serializer::new(&mut buf);
-    duration_with_unit::serialize(&Duration::from_millis(7), &mut ser).expect("serialize");
+    duration_with_unit::serialize(&Duration::from_millis(7), &mut ser)
+        .expect("serialize");
     assert_eq!(String::from_utf8(buf).unwrap(), r#""7ms""#);
 }

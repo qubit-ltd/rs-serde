@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Serde adapter for [`std::time::Duration`] as a string with a time unit.
 //!
 //! Serialization emits rounded whole milliseconds with an `ms` suffix.
@@ -37,7 +35,10 @@ use super::duration_millis::MILLISECOND_CONVERSION_OPTIONS;
 ///
 /// # Errors
 /// Returns the serializer error if writing the string value fails.
-pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize<S>(
+    duration: &Duration,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -64,14 +65,16 @@ where
     let value = serde_json::Value::deserialize(deserializer)?;
     match value {
         serde_json::Value::Number(number) => {
-            let millis = number
-                .as_u64()
-                .ok_or_else(|| D::Error::custom("duration integer must be a non-negative u64"))?;
+            let millis = number.as_u64().ok_or_else(|| {
+                D::Error::custom("duration integer must be a non-negative u64")
+            })?;
             DataConverter::from(millis)
                 .to_with::<Duration>(&MILLISECOND_CONVERSION_OPTIONS)
                 .map_err(D::Error::custom)
         }
-        serde_json::Value::String(text) => parse(&text).map_err(D::Error::custom),
+        serde_json::Value::String(text) => {
+            parse(&text).map_err(D::Error::custom)
+        }
         _ => Err(D::Error::custom(
             "duration must be a string with unit or a millisecond integer",
         )),
@@ -85,7 +88,6 @@ where
 ///
 /// # Returns
 /// A string in the form `<millis>ms`.
-///
 #[inline]
 pub fn format(duration: &Duration) -> String {
     DataConverter::from(*duration)

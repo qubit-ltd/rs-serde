@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2025 - 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2025 - 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 //! Serde adapter for [`std::time::Duration`] as whole milliseconds.
 //!
 //! Serialization emits a rounded `u64` millisecond value. Deserialization
@@ -30,7 +28,9 @@ use serde::{
 };
 
 /// Shared conversion options that pin duration conversion to milliseconds.
-pub(super) static MILLISECOND_CONVERSION_OPTIONS: LazyLock<DataConversionOptions> = LazyLock::new(|| {
+pub(super) static MILLISECOND_CONVERSION_OPTIONS: LazyLock<
+    DataConversionOptions,
+> = LazyLock::new(|| {
     DataConversionOptions::default().with_duration_options(
         DurationConversionOptions::default()
             .with_unit(DurationUnit::Milliseconds)
@@ -50,7 +50,10 @@ pub(super) static MILLISECOND_CONVERSION_OPTIONS: LazyLock<DataConversionOptions
 /// # Errors
 /// Returns the serializer error if converting or writing the integer value
 /// fails.
-pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize<S>(
+    duration: &Duration,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
