@@ -29,15 +29,27 @@ modules.
 
 - `duration_millis` serializes `std::time::Duration` as a whole millisecond `u64`.
 - Deserialization accepts a non-negative `u64` millisecond count.
-- Duration-to-millisecond conversion uses explicit `qubit-datatype` millisecond options.
+- Duration-to-millisecond conversion uses explicit millisecond and `Lossy`
+  options, so half milliseconds round up independently of global defaults.
 
-### Duration with Units
+### Exact Duration with Units
 
-- `duration_with_unit` serializes durations as strings such as `500ms`.
-- Deserialization accepts strings with `ns`, `us`, `µs`, `μs`, `ms`, `s`, `m`, `h`, or `d`.
+- `duration_with_unit` selects the largest unit that represents the duration
+  exactly, producing values such as `2m`, `2500ms`, `500us`, or `42ns`.
+- Exact formatting round-trips every `Duration`, including `Duration::MAX`.
+- Deserialization accepts strings with `ns`, `us`, `ms`, `s`, `m`, `h`, or `d`.
 - Bare integer input is accepted as milliseconds for lenient configuration parsing.
-- Duration-to-string conversion uses explicit `qubit-datatype` millisecond options.
+- Duration text is canonical and is not implicitly trimmed.
 - Invalid units, invalid numbers, fractional values, and overflows are rejected.
+- Direct parsing returns the structured `ParseDurationError` type.
+
+### Rounded Milliseconds with a Unit
+
+- `duration_millis_with_unit` always serializes as `<rounded-millis>ms`.
+- It uses half-up rounding and is intentionally lossy for sub-millisecond
+  values, making it suitable for displays and compatibility configuration.
+- It shares the same deserialization and structured parsing behavior as
+  `duration_with_unit`.
 
 ## Installation
 
@@ -45,12 +57,12 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-serde = "0.2"
+qubit-serde = "0.3"
 ```
 
 ## Quick Start
 
-### Duration with Unit Strings
+### Exact Duration with Unit Strings
 
 ```rust
 use std::time::Duration;
@@ -71,7 +83,30 @@ let config: Config = serde_json::from_str(r#"{"timeout":"5s"}"#)
 assert_eq!(config.timeout, Duration::from_secs(5));
 
 let json = serde_json::to_string(&config).expect("config should serialize");
-assert_eq!(json, r#"{"timeout":"5000ms"}"#);
+assert_eq!(json, r#"{"timeout":"5s"}"#);
+```
+
+### Rounded Millisecond Strings
+
+Use `duration_millis_with_unit` when the wire format must remain fixed to
+millisecond text:
+
+```rust
+use std::time::Duration;
+
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+struct DisplayValue {
+    #[serde(with = "qubit_serde::serde::duration_millis_with_unit")]
+    elapsed: Duration,
+}
+
+let value = DisplayValue {
+    elapsed: Duration::from_micros(1500),
+};
+let json = serde_json::to_string(&value).expect("duration should serialize");
+assert_eq!(json, r#"{"elapsed":"2ms"}"#);
 ```
 
 ### Duration as Milliseconds
@@ -98,12 +133,14 @@ assert_eq!(state.elapsed, Duration::from_millis(250));
 ## API Reference
 
 - [`serde::duration_millis`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_millis/index.html) - duration as whole milliseconds.
-- [`serde::duration_with_unit`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_with_unit/index.html) - duration as strings with supported time units.
+- [`serde::duration_millis_with_unit`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_millis_with_unit/index.html) - duration as rounded millisecond text.
+- [`serde::duration_with_unit`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_with_unit/index.html) - exact duration strings with automatically selected units.
 
 ## Testing & Code Coverage
 
-This project maintains tests for serialization, deserialization, accepted
-formats, invalid inputs, and overflow cases.
+This project maintains tests for serialization, deserialization, exact and
+rounded semantics, non-self-describing formats, invalid inputs, and overflow
+cases.
 
 ### Running Tests
 
@@ -131,7 +168,6 @@ Runtime dependencies:
 
 - `qubit-datatype` for shared duration conversion semantics.
 - `serde` for serialization and deserialization integration.
-- `serde_json` for scalar value handling in lenient duration deserialization.
 
 ## License
 

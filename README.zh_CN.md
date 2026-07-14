@@ -26,15 +26,25 @@ Qubit Serde 收集可在 Rust 库之间复用的小型 serde 适配器。当前�
 
 - `duration_millis` 将 `std::time::Duration` 序列化为整毫秒 `u64`。
 - 反序列化接受非负 `u64` 毫秒数。
-- Duration 到毫秒数的转换使用显式的 `qubit-datatype` 毫秒选项。
+- Duration 到毫秒数的转换显式使用毫秒单位和 `Lossy` 策略，因此半毫秒会向上
+  舍入，且不受全局默认值影响。
 
-### 带单位的 Duration 字符串
+### 精确的带单位 Duration 字符串
 
-- `duration_with_unit` 将 duration 序列化为 `500ms` 这样的字符串。
-- 反序列化接受带 `ns`、`us`、`µs`、`μs`、`ms`、`s`、`m`、`h`、`d` 的字符串。
+- `duration_with_unit` 会选择能够精确表示 duration 的最大单位，输出如 `2m`、
+  `2500ms`、`500us` 或 `42ns`。
+- 精确格式可以 round-trip 所有 `Duration`，包括 `Duration::MAX`。
+- 反序列化接受带 `ns`、`us`、`ms`、`s`、`m`、`h`、`d` 的字符串。
 - 裸整数输入会按毫秒处理，便于宽松配置解析。
-- Duration 到字符串的转换使用显式的 `qubit-datatype` 毫秒选项。
+- Duration 文本必须使用规范形式，不会被隐式 trim。
 - 无效单位、无效数字、小数值和溢出都会被拒绝。
+- 直接调用解析函数会返回结构化的 `ParseDurationError`。
+
+### 带单位的舍入毫秒字符串
+
+- `duration_millis_with_unit` 始终序列化为 `<舍入后的毫秒>ms`。
+- 它使用半向上舍入，会有意丢失亚毫秒精度，适合展示和兼容配置格式。
+- 它与 `duration_with_unit` 共享反序列化和结构化解析语义。
 
 ## 安装
 
@@ -42,12 +52,12 @@ Qubit Serde 收集可在 Rust 库之间复用的小型 serde 适配器。当前�
 
 ```toml
 [dependencies]
-qubit-serde = "0.2"
+qubit-serde = "0.3"
 ```
 
 ## 快速开始
 
-### 带单位字符串的 Duration
+### 精确的带单位 Duration 字符串
 
 ```rust
 use std::time::Duration;
@@ -68,7 +78,29 @@ let config: Config = serde_json::from_str(r#"{"timeout":"5s"}"#)
 assert_eq!(config.timeout, Duration::from_secs(5));
 
 let json = serde_json::to_string(&config).expect("config should serialize");
-assert_eq!(json, r#"{"timeout":"5000ms"}"#);
+assert_eq!(json, r#"{"timeout":"5s"}"#);
+```
+
+### 带单位的舍入毫秒字符串
+
+当 wire format 必须固定为毫秒文本时，使用 `duration_millis_with_unit`：
+
+```rust
+use std::time::Duration;
+
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+struct DisplayValue {
+    #[serde(with = "qubit_serde::serde::duration_millis_with_unit")]
+    elapsed: Duration,
+}
+
+let value = DisplayValue {
+    elapsed: Duration::from_micros(1500),
+};
+let json = serde_json::to_string(&value).expect("duration should serialize");
+assert_eq!(json, r#"{"elapsed":"2ms"}"#);
 ```
 
 ### 毫秒数形式的 Duration
@@ -95,11 +127,12 @@ assert_eq!(state.elapsed, Duration::from_millis(250));
 ## API 参考
 
 - [`serde::duration_millis`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_millis/index.html) - 将 duration 表示为整毫秒数。
-- [`serde::duration_with_unit`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_with_unit/index.html) - 将 duration 表示为带受支持时间单位的字符串。
+- [`serde::duration_millis_with_unit`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_millis_with_unit/index.html) - 将 duration 表示为带单位的舍入毫秒字符串。
+- [`serde::duration_with_unit`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_with_unit/index.html) - 将 duration 表示为自动选择单位的精确字符串。
 
 ## 测试与代码覆盖率
 
-本项目测试覆盖序列化、反序列化、可接受格式、无效输入和溢出场景。
+本项目测试覆盖序列化、反序列化、精确与舍入语义、非自描述格式、无效输入和溢出场景。
 
 ### 运行测试
 
@@ -127,7 +160,6 @@ cargo test
 
 - `qubit-datatype`：提供共享的 duration 转换语义。
 - `serde`：提供序列化和反序列化集成。
-- `serde_json`：用于宽松 duration 反序列化中的标量值处理。
 
 ## 许可证
 

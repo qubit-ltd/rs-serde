@@ -31,9 +31,10 @@ use serde::{
 pub(super) static MILLISECOND_CONVERSION_OPTIONS: LazyLock<
     DataConversionOptions,
 > = LazyLock::new(|| {
-    DataConversionOptions::default().with_duration_options(
+    DataConversionOptions::lossy().with_duration_options(
         DurationConversionOptions::default()
-            .with_unit(DurationUnit::Milliseconds)
+            .with_numeric_input_unit(DurationUnit::Milliseconds)
+            .with_output_unit(DurationUnit::Milliseconds)
             .with_append_unit_suffix(true),
     )
 });

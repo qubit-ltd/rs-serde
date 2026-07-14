@@ -1,6 +1,6 @@
 [package]
 name = "qubit-serde"
-version = "0.2.6"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.94"
 authors = ["Haixing Hu <starfish.hu@gmail.com>"]
@@ -33,6 +33,10 @@ test = true
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+thiserror = "2.0"
 
-qubit-datatype = "0.2"
+qubit-datatype = { version = "0.5", path = "../rs-datatype", features = ["converter"] }
+
+[dev-dependencies]
+postcard = { version = "1.1", default-features = false, features = ["use-std"] }
+serde_json = "1.0"

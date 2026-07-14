@@ -52,11 +52,10 @@ fn test_duration_millis_serialize_uses_datatype_rounding() {
 
 #[test]
 fn test_duration_millis_serialize_pins_millisecond_options() {
-    let seconds_options = DataConversionOptions::default()
-        .with_duration_options(
-            DurationConversionOptions::default()
-                .with_unit(DurationUnit::Seconds),
-        );
+    let seconds_options = DataConversionOptions::lossy().with_duration_options(
+        DurationConversionOptions::default()
+            .with_output_unit(DurationUnit::Seconds),
+    );
     let seconds: u64 = DataConverter::from(Duration::from_millis(2500))
         .to_with(&seconds_options)
         .expect("duration should convert to seconds");
@@ -96,7 +95,7 @@ fn test_duration_millis_deserialize_pins_millisecond_options() {
     let seconds_options = DataConversionOptions::default()
         .with_duration_options(
             DurationConversionOptions::default()
-                .with_unit(DurationUnit::Seconds),
+                .with_numeric_input_unit(DurationUnit::Seconds),
         );
     let seconds: Duration = DataConverter::from(2u64)
         .to_with(&seconds_options)
