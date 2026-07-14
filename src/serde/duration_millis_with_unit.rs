@@ -39,7 +39,6 @@ pub use super::duration_with_unit::{
 /// # Errors
 ///
 /// Returns the serializer error if writing the string value fails.
-#[inline(always)]
 pub fn serialize<S>(
     duration: &Duration,
     serializer: S,

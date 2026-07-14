@@ -80,6 +80,7 @@ impl DurationUnit {
 }
 
 /// Converts a subsecond unit count to a duration.
+#[inline(always)]
 fn duration_from_subseconds(
     value: u128,
     units_per_second: u128,
@@ -92,6 +93,7 @@ fn duration_from_subseconds(
 }
 
 /// Converts a whole-unit count to a duration in seconds.
+#[inline(always)]
 fn duration_from_seconds(
     value: u128,
     seconds_per_unit: u128,
@@ -182,7 +184,6 @@ impl<'de> Visitor<'de> for DurationVisitor {
 ///
 /// # Errors
 /// Returns the serializer error if writing the string value fails.
-#[inline]
 pub fn serialize<S>(
     duration: &Duration,
     serializer: S,
@@ -206,7 +207,6 @@ where
 /// # Errors
 /// Returns the deserializer error when the input has an unsupported unit,
 /// invalid number, fractional value, or overflows [`Duration`].
-#[inline]
 pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
@@ -320,6 +320,7 @@ fn parse_unit(suffix: &str) -> Result<DurationUnit, ParseDurationError> {
 ///
 /// Returns the deserializer's custom error when the count exceeds
 /// [`Duration`]'s range.
+#[inline(always)]
 fn duration_from_millis<E>(millis: u128) -> Result<Duration, E>
 where
     E: DeserializeError,
