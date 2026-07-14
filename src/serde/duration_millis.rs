@@ -10,16 +10,8 @@
 //! Serialization emits a rounded `u64` millisecond value. Deserialization
 //! accepts a `u64` millisecond value and converts it back to [`Duration`].
 
-use std::sync::LazyLock;
 use std::time::Duration;
 
-use qubit_datatype::{
-    DataConversionOptions,
-    DataConverter,
-    DurationConversionOptions,
-    DurationUnit,
-};
-use serde::de::Error as DeserializeError;
 use serde::ser::Error as SerializeError;
 use serde::{
     Deserialize,
@@ -27,17 +19,25 @@ use serde::{
     Serializer,
 };
 
-/// Shared conversion options that pin duration conversion to milliseconds.
-pub(super) static MILLISECOND_CONVERSION_OPTIONS: LazyLock<
-    DataConversionOptions,
-> = LazyLock::new(|| {
-    DataConversionOptions::lossy().with_duration_options(
-        DurationConversionOptions::default()
-            .with_numeric_input_unit(DurationUnit::Milliseconds)
-            .with_output_unit(DurationUnit::Milliseconds)
-            .with_append_unit_suffix(true),
-    )
-});
+/// Number of nanoseconds in one millisecond.
+const NANOS_PER_MILLISECOND: u128 = 1_000_000;
+
+/// Converts a duration to whole milliseconds using half-up rounding.
+///
+/// # Parameters
+///
+/// - `duration`: Duration to convert.
+///
+/// # Returns
+///
+/// The rounded millisecond count.
+#[inline(always)]
+pub(super) fn rounded_millis(duration: Duration) -> u128 {
+    let total_nanos = duration.as_nanos();
+    let millis = total_nanos / NANOS_PER_MILLISECOND;
+    let remainder = total_nanos % NANOS_PER_MILLISECOND;
+    millis + u128::from(remainder >= NANOS_PER_MILLISECOND / 2)
+}
 
 /// Serializes a [`Duration`] as a rounded `u64` millisecond count.
 ///
@@ -58,9 +58,8 @@ pub fn serialize<S>(
 where
     S: Serializer,
 {
-    let millis = DataConverter::from(*duration)
-        .to_with::<u64>(&MILLISECOND_CONVERSION_OPTIONS)
-        .map_err(S::Error::custom)?;
+    let millis = u64::try_from(rounded_millis(*duration))
+        .map_err(|_| S::Error::custom("duration exceeds u64 milliseconds"))?;
     serializer.serialize_u64(millis)
 }
 
@@ -73,14 +72,11 @@ where
 /// A [`Duration`] with millisecond precision.
 ///
 /// # Errors
-/// Returns the deserializer error when the input is not a valid `u64` or cannot
-/// be converted to [`Duration`].
+/// Returns the deserializer error when the input is not a valid `u64`.
 pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
 {
     let millis = u64::deserialize(deserializer)?;
-    DataConverter::from(millis)
-        .to_with::<Duration>(&MILLISECOND_CONVERSION_OPTIONS)
-        .map_err(D::Error::custom)
+    Ok(Duration::from_millis(millis))
 }

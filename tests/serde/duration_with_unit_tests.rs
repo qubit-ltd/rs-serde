@@ -9,13 +9,6 @@
 
 use std::time::Duration;
 
-use qubit_datatype::{
-    DataConversionOptions,
-    DataConverter,
-    DurationConversionOptions,
-    DurationUnit,
-    SuffixlessDurationPolicy,
-};
 use qubit_serde::serde::duration_with_unit::{
     self,
     ParseDurationError,
@@ -245,18 +238,7 @@ fn test_duration_with_unit_parse_rejects_surrounding_whitespace() {
 }
 
 #[test]
-fn test_duration_with_unit_parse_pins_millisecond_options_for_bare_numbers() {
-    let seconds_options = DataConversionOptions::default()
-        .with_duration_options(
-            DurationConversionOptions::default().with_suffixless_string_policy(
-                SuffixlessDurationPolicy::Assume(DurationUnit::Seconds),
-            ),
-        );
-    let seconds: Duration = DataConverter::from("2")
-        .to_with(&seconds_options)
-        .expect("bare number should parse as seconds");
-    assert_eq!(seconds, Duration::from_secs(2));
-
+fn test_duration_with_unit_parse_treats_bare_numbers_as_milliseconds() {
     let duration =
         duration_with_unit::parse("2").expect("duration should parse");
 

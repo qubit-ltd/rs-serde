@@ -19,7 +19,7 @@ modules.
 ## Design Goals
 
 - **Focused adapters**: provide small, reusable `#[serde(with = "...")]` modules.
-- **Shared conversion semantics**: reuse `qubit-datatype` conversion rules for supported scalar formats.
+- **Stable conversion semantics**: keep duration wire formats explicit and self-contained.
 - **Configuration friendly**: support human-readable duration strings where useful.
 - **Easy reuse**: make adapters available through a consistent `qubit_serde::serde::*` path.
 
@@ -29,8 +29,8 @@ modules.
 
 - `duration_millis` serializes `std::time::Duration` as a whole millisecond `u64`.
 - Deserialization accepts a non-negative `u64` millisecond count.
-- Duration-to-millisecond conversion uses explicit millisecond and `Lossy`
-  options, so half milliseconds round up independently of global defaults.
+- Duration-to-millisecond conversion uses half-up rounding, so half
+  milliseconds round up.
 
 ### Exact Duration with Units
 
@@ -166,8 +166,8 @@ See [COVERAGE.md](COVERAGE.md) for detailed coverage statistics.
 
 Runtime dependencies:
 
-- `qubit-datatype` for shared duration conversion semantics.
 - `serde` for serialization and deserialization integration.
+- `thiserror` for structured parsing errors.
 
 ## License
 
@@ -194,7 +194,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ### Development Guidelines
 
 - Follow the Rust API guidelines.
-- Keep adapters small, documented, and aligned with shared conversion semantics.
+- Keep adapters small, documented, and explicit about conversion semantics.
 - Add tests for success paths, invalid input, and boundary conditions.
 - Run `./ci-check.sh` before submitting PRs.
 

@@ -16,7 +16,6 @@
 use std::fmt;
 use std::time::Duration;
 
-use qubit_datatype::DurationUnit;
 use serde::de::{
     Error as DeserializeError,
     Unexpected,
@@ -38,6 +37,68 @@ const EXACT_UNITS: [(u128, &str); 6] = [
     (1_000_000, "ms"),
     (1_000, "us"),
 ];
+
+/// Supported units in parsed duration text.
+#[derive(Clone, Copy)]
+enum DurationUnit {
+    Nanoseconds,
+    Microseconds,
+    Milliseconds,
+    Seconds,
+    Minutes,
+    Hours,
+    Days,
+}
+
+impl DurationUnit {
+    /// Converts a unit count to a duration without overflowing its seconds.
+    ///
+    /// # Parameters
+    ///
+    /// - `value`: Non-negative count expressed in this unit.
+    ///
+    /// # Returns
+    ///
+    /// The represented duration, or [`None`] when it is out of range.
+    fn duration_from_u128(self, value: u128) -> Option<Duration> {
+        match self {
+            Self::Nanoseconds => {
+                duration_from_subseconds(value, 1_000_000_000, 1)
+            }
+            Self::Microseconds => {
+                duration_from_subseconds(value, 1_000_000, 1_000)
+            }
+            Self::Milliseconds => {
+                duration_from_subseconds(value, 1_000, 1_000_000)
+            }
+            Self::Seconds => duration_from_seconds(value, 1),
+            Self::Minutes => duration_from_seconds(value, 60),
+            Self::Hours => duration_from_seconds(value, 3_600),
+            Self::Days => duration_from_seconds(value, 86_400),
+        }
+    }
+}
+
+/// Converts a subsecond unit count to a duration.
+fn duration_from_subseconds(
+    value: u128,
+    units_per_second: u128,
+    nanos_per_unit: u32,
+) -> Option<Duration> {
+    let seconds = u64::try_from(value / units_per_second).ok()?;
+    let subsecond_units = u32::try_from(value % units_per_second).ok()?;
+    let nanoseconds = subsecond_units.checked_mul(nanos_per_unit)?;
+    Some(Duration::new(seconds, nanoseconds))
+}
+
+/// Converts a whole-unit count to a duration in seconds.
+fn duration_from_seconds(
+    value: u128,
+    seconds_per_unit: u128,
+) -> Option<Duration> {
+    let seconds = value.checked_mul(seconds_per_unit)?;
+    Some(Duration::from_secs(u64::try_from(seconds).ok()?))
+}
 
 /// Visitor for the shared unit-suffixed duration input protocol.
 struct DurationVisitor;
@@ -208,7 +269,7 @@ pub fn parse(text: &str) -> Result<Duration, ParseDurationError> {
         .parse::<u128>()
         .map_err(|_| ParseDurationError::OutOfRange)?;
     unit.duration_from_u128(value)
-        .map_err(|_| ParseDurationError::OutOfRange)
+        .ok_or(ParseDurationError::OutOfRange)
 }
 
 /// Parses a canonical duration unit suffix, defaulting a missing suffix to
@@ -265,5 +326,5 @@ where
 {
     DurationUnit::Milliseconds
         .duration_from_u128(millis)
-        .map_err(|_| E::custom(ParseDurationError::OutOfRange))
+        .ok_or_else(|| E::custom(ParseDurationError::OutOfRange))
 }

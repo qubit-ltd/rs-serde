@@ -16,7 +16,7 @@ Qubit Serde 收集可在 Rust 库之间复用的小型 serde 适配器。当前�
 ## 设计目标
 
 - **聚焦适配器**：提供小型、可复用的 `#[serde(with = "...")]` 模块。
-- **共享转换语义**：复用 `qubit-datatype` 对受支持标量格式的转换规则。
+- **稳定转换语义**：明确并在本 crate 内实现 duration 的 wire format。
 - **配置友好**：在合适场景支持人类可读的 duration 字符串。
 - **易于复用**：通过统一的 `qubit_serde::serde::*` 路径提供适配器。
 
@@ -26,8 +26,7 @@ Qubit Serde 收集可在 Rust 库之间复用的小型 serde 适配器。当前�
 
 - `duration_millis` 将 `std::time::Duration` 序列化为整毫秒 `u64`。
 - 反序列化接受非负 `u64` 毫秒数。
-- Duration 到毫秒数的转换显式使用毫秒单位和 `Lossy` 策略，因此半毫秒会向上
-  舍入，且不受全局默认值影响。
+- Duration 到毫秒数的转换使用半向上舍入，因此半毫秒会向上舍入。
 
 ### 精确的带单位 Duration 字符串
 
@@ -158,8 +157,8 @@ cargo test
 
 运行时依赖：
 
-- `qubit-datatype`：提供共享的 duration 转换语义。
 - `serde`：提供序列化和反序列化集成。
+- `thiserror`：提供结构化解析错误。
 
 ## 许可证
 
@@ -184,7 +183,7 @@ Copyright (c) 2025 - 2026. Haixing Hu, Qubit Co. Ltd. All rights reserved.
 ### 开发指南
 
 - 遵循 Rust API 指南。
-- 保持适配器小型、文档清楚，并与共享转换语义对齐。
+- 保持适配器小型、文档清楚，并明确说明转换语义。
 - 为成功路径、无效输入和边界条件添加测试。
 - 提交 PR 前运行 `./ci-check.sh`。
 

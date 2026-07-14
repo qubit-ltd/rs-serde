@@ -9,12 +9,6 @@
 
 use std::time::Duration;
 
-use qubit_datatype::{
-    DataConversionOptions,
-    DataConverter,
-    DurationConversionOptions,
-    DurationUnit,
-};
 use qubit_serde::serde::duration_millis_with_unit::{
     self,
     ParseDurationError,
@@ -60,16 +54,7 @@ fn test_duration_millis_with_unit_serialize_uses_half_up_rounding() {
 }
 
 #[test]
-fn test_duration_millis_with_unit_format_pins_millisecond_options() {
-    let seconds_options = DataConversionOptions::lossy().with_duration_options(
-        DurationConversionOptions::default()
-            .with_output_unit(DurationUnit::Seconds),
-    );
-    let seconds: String = DataConverter::from(Duration::from_millis(2500))
-        .to_with(&seconds_options)
-        .expect("duration should format as seconds");
-    assert_eq!(seconds, "3s");
-
+fn test_duration_millis_with_unit_format_keeps_millisecond_unit() {
     let text = duration_millis_with_unit::format(&Duration::from_millis(2500));
 
     assert_eq!(text, "2500ms");

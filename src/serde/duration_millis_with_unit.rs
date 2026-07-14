@@ -14,8 +14,9 @@
 
 use std::time::Duration;
 
-use qubit_datatype::DurationUnit;
 use serde::Serializer;
+
+use super::duration_millis::rounded_millis;
 
 pub use super::duration_with_unit::{
     ParseDurationError,
@@ -60,6 +61,6 @@ where
 /// A string in the form `<rounded-millis>ms`.
 #[inline(always)]
 pub fn format(duration: &Duration) -> String {
-    let millis = DurationUnit::Milliseconds.rounded_units(*duration);
+    let millis = rounded_millis(*duration);
     format!("{millis}ms")
 }

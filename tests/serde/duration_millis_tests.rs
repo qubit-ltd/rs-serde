@@ -9,12 +9,6 @@
 
 use std::time::Duration;
 
-use qubit_datatype::{
-    DataConversionOptions,
-    DataConverter,
-    DurationConversionOptions,
-    DurationUnit,
-};
 use serde::{
     Deserialize,
     Serialize,
@@ -39,7 +33,7 @@ fn test_duration_millis_serialize_as_integer() {
 }
 
 #[test]
-fn test_duration_millis_serialize_uses_datatype_rounding() {
+fn test_duration_millis_serialize_uses_half_up_rounding() {
     let holder = Holder {
         duration: Duration::from_micros(1500),
     };
@@ -51,16 +45,7 @@ fn test_duration_millis_serialize_uses_datatype_rounding() {
 }
 
 #[test]
-fn test_duration_millis_serialize_pins_millisecond_options() {
-    let seconds_options = DataConversionOptions::lossy().with_duration_options(
-        DurationConversionOptions::default()
-            .with_output_unit(DurationUnit::Seconds),
-    );
-    let seconds: u64 = DataConverter::from(Duration::from_millis(2500))
-        .to_with(&seconds_options)
-        .expect("duration should convert to seconds");
-    assert_eq!(seconds, 3);
-
+fn test_duration_millis_serialize_keeps_millisecond_unit() {
     let holder = Holder {
         duration: Duration::from_millis(2500),
     };
@@ -91,17 +76,7 @@ fn test_duration_millis_deserialize_from_integer() {
 }
 
 #[test]
-fn test_duration_millis_deserialize_pins_millisecond_options() {
-    let seconds_options = DataConversionOptions::default()
-        .with_duration_options(
-            DurationConversionOptions::default()
-                .with_numeric_input_unit(DurationUnit::Seconds),
-        );
-    let seconds: Duration = DataConverter::from(2u64)
-        .to_with(&seconds_options)
-        .expect("integer should convert to duration seconds");
-    assert_eq!(seconds, Duration::from_secs(2));
-
+fn test_duration_millis_deserialize_treats_integer_as_milliseconds() {
     let holder: Holder = serde_json::from_str(r#"{"duration":2}"#)
         .expect("duration should deserialize");
 
