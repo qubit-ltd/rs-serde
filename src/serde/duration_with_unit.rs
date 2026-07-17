@@ -16,6 +16,14 @@
 use std::fmt;
 use std::time::Duration;
 
+use qubit_datatype::{
+    DurationTextOptions,
+    DurationUnit,
+    DurationUnitSuffixSet,
+    SuffixlessDurationPolicy,
+    format_duration_exact,
+    parse_duration_text,
+};
 use serde::de::{
     Error as DeserializeError,
     Unexpected,
@@ -28,79 +36,11 @@ use serde::{
 
 pub use super::parse_duration_error::ParseDurationError;
 
-/// Units larger than nanoseconds, in descending order of magnitude.
-const EXACT_UNITS: [(u128, &str); 6] = [
-    (86_400_000_000_000, "d"),
-    (3_600_000_000_000, "h"),
-    (60_000_000_000, "m"),
-    (1_000_000_000, "s"),
-    (1_000_000, "ms"),
-    (1_000, "us"),
-];
-
-/// Supported units in parsed duration text.
-#[derive(Clone, Copy)]
-enum DurationUnit {
-    Nanoseconds,
-    Microseconds,
-    Milliseconds,
-    Seconds,
-    Minutes,
-    Hours,
-    Days,
-}
-
-impl DurationUnit {
-    /// Converts a unit count to a duration without overflowing its seconds.
-    ///
-    /// # Parameters
-    ///
-    /// - `value`: Non-negative count expressed in this unit.
-    ///
-    /// # Returns
-    ///
-    /// The represented duration, or [`None`] when it is out of range.
-    fn duration_from_u128(self, value: u128) -> Option<Duration> {
-        match self {
-            Self::Nanoseconds => {
-                duration_from_subseconds(value, 1_000_000_000, 1)
-            }
-            Self::Microseconds => {
-                duration_from_subseconds(value, 1_000_000, 1_000)
-            }
-            Self::Milliseconds => {
-                duration_from_subseconds(value, 1_000, 1_000_000)
-            }
-            Self::Seconds => duration_from_seconds(value, 1),
-            Self::Minutes => duration_from_seconds(value, 60),
-            Self::Hours => duration_from_seconds(value, 3_600),
-            Self::Days => duration_from_seconds(value, 86_400),
-        }
-    }
-}
-
-/// Converts a subsecond unit count to a duration.
-#[inline(always)]
-fn duration_from_subseconds(
-    value: u128,
-    units_per_second: u128,
-    nanos_per_unit: u32,
-) -> Option<Duration> {
-    let seconds = u64::try_from(value / units_per_second).ok()?;
-    let subsecond_units = u32::try_from(value % units_per_second).ok()?;
-    let nanoseconds = subsecond_units.checked_mul(nanos_per_unit)?;
-    Some(Duration::new(seconds, nanoseconds))
-}
-
-/// Converts a whole-unit count to a duration in seconds.
-#[inline(always)]
-fn duration_from_seconds(
-    value: u128,
-    seconds_per_unit: u128,
-) -> Option<Duration> {
-    let seconds = value.checked_mul(seconds_per_unit)?;
-    Some(Duration::from_secs(u64::try_from(seconds).ok()?))
-}
+/// ASCII Duration text profile with suffixless milliseconds.
+const DURATION_TEXT_OPTIONS: DurationTextOptions = DurationTextOptions::new(
+    SuffixlessDurationPolicy::Assume(DurationUnit::Milliseconds),
+    DurationUnitSuffixSet::Ascii,
+);
 
 /// Visitor for the shared unit-suffixed duration input protocol.
 struct DurationVisitor;
@@ -227,16 +167,7 @@ where
 /// A canonical unit-suffixed string. Zero is formatted as `0ms`.
 #[inline]
 pub fn format(duration: &Duration) -> String {
-    let total_nanos = duration.as_nanos();
-    if total_nanos == 0 {
-        return "0ms".to_string();
-    }
-    for (nanos_per_unit, suffix) in EXACT_UNITS {
-        if total_nanos.is_multiple_of(nanos_per_unit) {
-            return format!("{}{suffix}", total_nanos / nanos_per_unit);
-        }
-    }
-    format!("{total_nanos}ns")
+    format_duration_exact(*duration)
 }
 
 /// Parses a [`Duration`] from a string with a supported unit.
@@ -256,54 +187,7 @@ pub fn format(duration: &Duration) -> String {
 /// [`ParseDurationError::OutOfRange`] when the value cannot fit in a
 /// [`Duration`].
 pub fn parse(text: &str) -> Result<Duration, ParseDurationError> {
-    let split_at = text
-        .bytes()
-        .position(|byte| !byte.is_ascii_digit())
-        .unwrap_or(text.len());
-    let (digits, suffix) = text.split_at(split_at);
-    if digits.is_empty() {
-        return Err(ParseDurationError::InvalidSyntax);
-    }
-    let unit = parse_unit(suffix)?;
-    let value = digits
-        .parse::<u128>()
-        .map_err(|_| ParseDurationError::OutOfRange)?;
-    unit.duration_from_u128(value)
-        .ok_or(ParseDurationError::OutOfRange)
-}
-
-/// Parses a canonical duration unit suffix, defaulting a missing suffix to
-/// milliseconds.
-///
-/// # Parameters
-///
-/// - `suffix`: The suffix portion following the numeric duration value.
-///
-/// # Returns
-///
-/// The corresponding duration unit.
-///
-/// # Errors
-///
-/// Returns [`ParseDurationError::InvalidSyntax`] for non-ASCII syntax and
-/// [`ParseDurationError::UnsupportedUnit`] for an unknown ASCII suffix.
-fn parse_unit(suffix: &str) -> Result<DurationUnit, ParseDurationError> {
-    let unit = match suffix {
-        "" | "ms" => DurationUnit::Milliseconds,
-        "ns" => DurationUnit::Nanoseconds,
-        "us" => DurationUnit::Microseconds,
-        "s" => DurationUnit::Seconds,
-        "m" => DurationUnit::Minutes,
-        "h" => DurationUnit::Hours,
-        "d" => DurationUnit::Days,
-        _ if suffix.bytes().all(|byte| byte.is_ascii_alphabetic()) => {
-            return Err(ParseDurationError::UnsupportedUnit {
-                unit: suffix.to_string(),
-            });
-        }
-        _ => return Err(ParseDurationError::InvalidSyntax),
-    };
-    Ok(unit)
+    parse_duration_text(text, &DURATION_TEXT_OPTIONS)
 }
 
 /// Converts a non-negative millisecond count from a Serde integer token.
@@ -327,5 +211,5 @@ where
 {
     DurationUnit::Milliseconds
         .duration_from_u128(millis)
-        .ok_or_else(|| E::custom(ParseDurationError::OutOfRange))
+        .map_err(|_| E::custom(ParseDurationError::OutOfRange))
 }

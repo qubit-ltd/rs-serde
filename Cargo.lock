@@ -57,13 +57,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "qubit-datatype"
+version = "0.7.0"
+dependencies = [
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "qubit-serde"
 version = "0.3.0"
 dependencies = [
  "postcard",
+ "qubit-datatype",
  "serde",
  "serde_json",
- "thiserror",
 ]
 
 [[package]]

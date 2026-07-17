@@ -12,15 +12,13 @@
 
 use std::time::Duration;
 
+use qubit_datatype::DurationUnit;
 use serde::ser::Error as SerializeError;
 use serde::{
     Deserialize,
     Deserializer,
     Serializer,
 };
-
-/// Number of nanoseconds in one millisecond.
-const NANOS_PER_MILLISECOND: u128 = 1_000_000;
 
 /// Converts a duration to whole milliseconds using half-up rounding.
 ///
@@ -33,10 +31,7 @@ const NANOS_PER_MILLISECOND: u128 = 1_000_000;
 /// The rounded millisecond count.
 #[inline(always)]
 pub(super) fn rounded_millis(duration: Duration) -> u128 {
-    let total_nanos = duration.as_nanos();
-    let millis = total_nanos / NANOS_PER_MILLISECOND;
-    let remainder = total_nanos % NANOS_PER_MILLISECOND;
-    millis + u128::from(remainder >= NANOS_PER_MILLISECOND / 2)
+    DurationUnit::Milliseconds.rounded_units(duration)
 }
 
 /// Serializes a [`Duration`] as a rounded `u64` millisecond count.

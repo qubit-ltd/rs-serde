@@ -32,8 +32,8 @@ doctest = true
 test = true
 
 [dependencies]
+qubit-datatype = { version = "0.7", path = "../rs-datatype", default-features = false, features = ["duration"] }
 serde = { version = "1.0", features = ["derive"] }
-thiserror = "2.0"
 
 [dev-dependencies]
 postcard = { version = "1.1", default-features = false, features = ["use-std"] }
