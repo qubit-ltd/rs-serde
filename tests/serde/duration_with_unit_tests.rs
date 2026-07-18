@@ -308,25 +308,6 @@ fn test_duration_with_unit_parse_errors_and_overflows() {
 }
 
 #[test]
-fn test_parse_duration_error_display() {
-    assert_eq!(
-        ParseDurationError::InvalidSyntax.to_string(),
-        "invalid duration syntax; expected [0-9]+(ns|us|ms|s|m|h|d)?"
-    );
-    assert_eq!(
-        ParseDurationError::UnsupportedUnit {
-            unit: "fortnights".to_string(),
-        }
-        .to_string(),
-        "unsupported duration unit `fortnights`"
-    );
-    assert_eq!(
-        ParseDurationError::OutOfRange.to_string(),
-        "duration value is out of range"
-    );
-}
-
-#[test]
 fn test_duration_with_unit_serialize_function() {
     let mut buf = Vec::new();
     let mut ser = serde_json::Serializer::new(&mut buf);

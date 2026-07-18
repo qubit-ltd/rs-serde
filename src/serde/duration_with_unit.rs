@@ -186,6 +186,7 @@ pub fn format(duration: &Duration) -> String {
 /// [`ParseDurationError::UnsupportedUnit`] for an unknown ASCII unit, and
 /// [`ParseDurationError::OutOfRange`] when the value cannot fit in a
 /// [`Duration`].
+#[inline(always)]
 pub fn parse(text: &str) -> Result<Duration, ParseDurationError> {
     parse_duration_text(text, &DURATION_TEXT_OPTIONS)
 }
