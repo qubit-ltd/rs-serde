@@ -9,10 +9,8 @@
 
 use std::time::Duration;
 
-use qubit_serde::serde::duration_millis_with_unit::{
-    self,
-    ParseDurationError,
-};
+use qubit_datatype::DurationParseError;
+use qubit_serde::serde::duration_millis_with_unit;
 use serde::{
     Deserialize,
     Serialize,
@@ -72,7 +70,7 @@ fn test_duration_millis_with_unit_deserialize_supported_input() {
 fn test_duration_millis_with_unit_parse_returns_structured_error() {
     assert_eq!(
         duration_millis_with_unit::parse("12fortnights"),
-        Err(ParseDurationError::UnsupportedUnit {
+        Err(DurationParseError::UnsupportedUnit {
             unit: "fortnights".to_string(),
         })
     );

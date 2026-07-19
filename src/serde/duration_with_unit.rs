@@ -17,6 +17,7 @@ use std::fmt;
 use std::time::Duration;
 
 use qubit_datatype::{
+    DurationParseError,
     DurationTextOptions,
     DurationUnit,
     DurationUnitSuffixSet,
@@ -33,8 +34,6 @@ use serde::{
     Deserializer,
     Serializer,
 };
-
-pub use super::parse_duration_error::ParseDurationError;
 
 /// ASCII Duration text profile with suffixless milliseconds.
 const DURATION_TEXT_OPTIONS: DurationTextOptions = DurationTextOptions::new(
@@ -182,12 +181,12 @@ pub fn format(duration: &Duration) -> String {
 /// The parsed [`Duration`].
 ///
 /// # Errors
-/// Returns [`ParseDurationError::InvalidSyntax`] for non-canonical text,
-/// [`ParseDurationError::UnsupportedUnit`] for an unknown ASCII unit, and
-/// [`ParseDurationError::OutOfRange`] when the value cannot fit in a
+/// Returns [`DurationParseError::InvalidSyntax`] for non-canonical text,
+/// [`DurationParseError::UnsupportedUnit`] for an unknown ASCII unit, and
+/// [`DurationParseError::OutOfRange`] when the value cannot fit in a
 /// [`Duration`].
 #[inline(always)]
-pub fn parse(text: &str) -> Result<Duration, ParseDurationError> {
+pub fn parse(text: &str) -> Result<Duration, DurationParseError> {
     parse_duration_text(text, &DURATION_TEXT_OPTIONS)
 }
 
@@ -212,5 +211,5 @@ where
 {
     DurationUnit::Milliseconds
         .duration_from_u128(millis)
-        .map_err(|_| E::custom(ParseDurationError::OutOfRange))
+        .map_err(|_| E::custom(DurationParseError::OutOfRange))
 }

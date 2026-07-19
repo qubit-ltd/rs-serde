@@ -64,7 +64,7 @@ dependencies = [
 
 [[package]]
 name = "qubit-datatype"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "serde",
  "strum",
@@ -73,7 +73,7 @@ dependencies = [
 
 [[package]]
 name = "qubit-serde"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "postcard",
  "qubit-datatype",

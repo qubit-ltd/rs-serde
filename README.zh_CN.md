@@ -37,7 +37,7 @@ Qubit Serde 收集可在 Rust 库之间复用的小型 serde 适配器。当前�
 - 裸整数输入会按毫秒处理，便于宽松配置解析。
 - Duration 文本必须使用规范形式，不会被隐式 trim。
 - 无效单位、无效数字、小数值和溢出都会被拒绝。
-- 直接调用解析函数会返回结构化的 `ParseDurationError`。
+- 直接调用解析函数会返回 `qubit_datatype::DurationParseError`。
 
 ### 带单位的舍入毫秒字符串
 
@@ -51,7 +51,7 @@ Qubit Serde 收集可在 Rust 库之间复用的小型 serde 适配器。当前�
 
 ```toml
 [dependencies]
-qubit-serde = "0.3"
+qubit-serde = "0.4"
 ```
 
 ## 快速开始

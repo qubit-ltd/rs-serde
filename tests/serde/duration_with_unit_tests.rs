@@ -9,10 +9,8 @@
 
 use std::time::Duration;
 
-use qubit_serde::serde::duration_with_unit::{
-    self,
-    ParseDurationError,
-};
+use qubit_datatype::DurationParseError;
+use qubit_serde::serde::duration_with_unit;
 use serde::de::value::{
     Error as ValueError,
     I64Deserializer,
@@ -269,23 +267,23 @@ fn test_duration_with_unit_parse_errors_and_overflows() {
 
     assert_eq!(
         duration_with_unit::parse("340282366920938463463374607431768211456ns"),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
     assert_eq!(
         duration_with_unit::parse(&format!("{}s", u128::MAX)),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
     assert_eq!(
         duration_with_unit::parse("x12ms"),
-        Err(ParseDurationError::InvalidSyntax)
+        Err(DurationParseError::InvalidSyntax)
     );
     assert_eq!(
         duration_with_unit::parse("12.5s"),
-        Err(ParseDurationError::InvalidSyntax)
+        Err(DurationParseError::InvalidSyntax)
     );
     assert_eq!(
         duration_with_unit::parse("12fortnights"),
-        Err(ParseDurationError::UnsupportedUnit {
+        Err(DurationParseError::UnsupportedUnit {
             unit: "fortnights".to_string(),
         })
     );
@@ -293,17 +291,17 @@ fn test_duration_with_unit_parse_errors_and_overflows() {
     let vm = u64::MAX / 60 + 1;
     assert_eq!(
         duration_with_unit::parse(&format!("{vm}m")),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
     let vh = u64::MAX / (60 * 60) + 1;
     assert_eq!(
         duration_with_unit::parse(&format!("{vh}h")),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
     let vd = u64::MAX / (24 * 60 * 60) + 1;
     assert_eq!(
         duration_with_unit::parse(&format!("{vd}d")),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
 }
 

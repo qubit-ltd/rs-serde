@@ -1,6 +1,6 @@
 [package]
 name = "qubit-serde"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.94"
 authors = ["Haixing Hu <starfish.hu@gmail.com>"]
@@ -32,7 +32,7 @@ doctest = true
 test = true
 
 [dependencies]
-qubit-datatype = { version = "0.7", path = "../rs-datatype", default-features = false, features = ["duration"] }
+qubit-datatype = { version = "0.8", path = "../rs-datatype", default-features = false, features = ["duration"] }
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]

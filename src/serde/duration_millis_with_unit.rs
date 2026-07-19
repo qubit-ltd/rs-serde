@@ -19,7 +19,6 @@ use serde::Serializer;
 use super::duration_millis::rounded_millis;
 
 pub use super::duration_with_unit::{
-    ParseDurationError,
     deserialize,
     parse,
 };

@@ -41,7 +41,7 @@ modules.
 - Bare integer input is accepted as milliseconds for lenient configuration parsing.
 - Duration text is canonical and is not implicitly trimmed.
 - Invalid units, invalid numbers, fractional values, and overflows are rejected.
-- Direct parsing returns the structured `ParseDurationError` type.
+- Direct parsing returns `qubit_datatype::DurationParseError`.
 
 ### Rounded Milliseconds with a Unit
 
@@ -57,7 +57,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-serde = "0.3"
+qubit-serde = "0.4"
 ```
 
 ## Quick Start
