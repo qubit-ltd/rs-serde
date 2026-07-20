@@ -14,11 +14,7 @@ use std::time::Duration;
 
 use qubit_datatype::DurationUnit;
 use serde::ser::Error as SerializeError;
-use serde::{
-    Deserialize,
-    Deserializer,
-    Serializer,
-};
+use serde::{Deserialize, Deserializer, Serializer};
 
 /// Converts a duration to whole milliseconds using half-up rounding.
 ///
@@ -46,10 +42,7 @@ pub(super) fn rounded_millis(duration: Duration) -> u128 {
 /// # Errors
 /// Returns the serializer error if converting or writing the integer value
 /// fails.
-pub fn serialize<S>(
-    duration: &Duration,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

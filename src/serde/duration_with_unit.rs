@@ -17,23 +17,11 @@ use std::fmt;
 use std::time::Duration;
 
 use qubit_datatype::{
-    DurationParseError,
-    DurationTextOptions,
-    DurationUnit,
-    DurationUnitSuffixSet,
-    SuffixlessDurationPolicy,
-    format_duration_exact,
-    parse_duration_text,
+    DurationParseError, DurationTextOptions, DurationUnit, DurationUnitSuffixSet,
+    SuffixlessDurationPolicy, format_duration_exact, parse_duration_text,
 };
-use serde::de::{
-    Error as DeserializeError,
-    Unexpected,
-    Visitor,
-};
-use serde::{
-    Deserializer,
-    Serializer,
-};
+use serde::de::{Error as DeserializeError, Unexpected, Visitor};
+use serde::{Deserializer, Serializer};
 
 /// ASCII Duration text profile with suffixless milliseconds.
 const DURATION_TEXT_OPTIONS: DurationTextOptions = DurationTextOptions::new(
@@ -105,9 +93,7 @@ impl<'de> Visitor<'de> for DurationVisitor {
     {
         match u128::try_from(value) {
             Ok(value) => self.visit_u128(value),
-            Err(_) => {
-                Err(E::custom("duration integer must be a non-negative value"))
-            }
+            Err(_) => Err(E::custom("duration integer must be a non-negative value")),
         }
     }
 }
@@ -123,10 +109,7 @@ impl<'de> Visitor<'de> for DurationVisitor {
 ///
 /// # Errors
 /// Returns the serializer error if writing the string value fails.
-pub fn serialize<S>(
-    duration: &Duration,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

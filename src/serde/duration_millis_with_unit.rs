@@ -18,10 +18,7 @@ use serde::Serializer;
 
 use super::duration_millis::rounded_millis;
 
-pub use super::duration_with_unit::{
-    deserialize,
-    parse,
-};
+pub use super::duration_with_unit::{deserialize, parse};
 
 /// Serializes a [`Duration`] as rounded whole milliseconds with an `ms`
 /// suffix.
@@ -38,10 +35,7 @@ pub use super::duration_with_unit::{
 /// # Errors
 ///
 /// Returns the serializer error if writing the string value fails.
-pub fn serialize<S>(
-    duration: &Duration,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

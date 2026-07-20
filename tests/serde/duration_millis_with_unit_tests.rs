@@ -11,10 +11,7 @@ use std::time::Duration;
 
 use qubit_datatype::DurationParseError;
 use qubit_serde::serde::duration_millis_with_unit;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Holder {
@@ -28,8 +25,7 @@ fn test_duration_millis_with_unit_serialize_as_millisecond_string() {
         duration: Duration::from_millis(1500),
     };
 
-    let json =
-        serde_json::to_string(&holder).expect("duration should serialize");
+    let json = serde_json::to_string(&holder).expect("duration should serialize");
 
     assert_eq!(json, r#"{"duration":"1500ms"}"#);
 }
@@ -45,8 +41,7 @@ fn test_duration_millis_with_unit_serialize_uses_half_up_rounding() {
 
     for (duration, expected) in cases {
         let holder = Holder { duration };
-        let json =
-            serde_json::to_value(holder).expect("duration should serialize");
+        let json = serde_json::to_value(holder).expect("duration should serialize");
         assert_eq!(json["duration"], expected);
     }
 }
@@ -60,8 +55,8 @@ fn test_duration_millis_with_unit_format_keeps_millisecond_unit() {
 
 #[test]
 fn test_duration_millis_with_unit_deserialize_supported_input() {
-    let holder: Holder = serde_json::from_str(r#"{"duration":"42ns"}"#)
-        .expect("duration should deserialize");
+    let holder: Holder =
+        serde_json::from_str(r#"{"duration":"42ns"}"#).expect("duration should deserialize");
 
     assert_eq!(holder.duration, Duration::from_nanos(42));
 }
@@ -80,11 +75,8 @@ fn test_duration_millis_with_unit_parse_returns_structured_error() {
 fn test_duration_millis_with_unit_serialize_function() {
     let mut buffer = Vec::new();
     let mut serializer = serde_json::Serializer::new(&mut buffer);
-    duration_millis_with_unit::serialize(
-        &Duration::from_micros(1500),
-        &mut serializer,
-    )
-    .expect("duration should serialize");
+    duration_millis_with_unit::serialize(&Duration::from_micros(1500), &mut serializer)
+        .expect("duration should serialize");
 
     assert_eq!(
         String::from_utf8(buffer).expect("serialized text should be UTF-8"),
