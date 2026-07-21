@@ -8,17 +8,47 @@
 //! Lossy Serde adapter for [`std::time::Duration`] as millisecond text.
 //!
 //! Serialization rounds to the nearest whole millisecond using half-up
-//! rounding and appends `ms`. Deserialization accepts canonical strings with
-//! any supported duration unit, and human-readable formats also accept a bare
-//! non-negative millisecond integer.
+//! rounding and appends `ms`. Deserialization accepts only the matching
+//! canonical `<integer>ms` form.
 
 use std::time::Duration;
 
-use serde::Serializer;
+use qubit_datatype::{
+    DurationParseError,
+    DurationUnit,
+};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serializer,
+};
 
 use super::duration_millis::rounded_millis;
 
-pub use super::duration_with_unit::{deserialize, parse};
+/// Deserializes only the canonical millisecond text representation.
+pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let text = String::deserialize(deserializer)?;
+    parse(&text).map_err(serde::de::Error::custom)
+}
+
+/// Parses a non-negative whole millisecond count with the canonical ms symbol.
+pub fn parse(text: &str) -> Result<Duration, DurationParseError> {
+    let Some(digits) = text.strip_suffix("ms") else {
+        return Err(DurationParseError::InvalidSyntax);
+    };
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(DurationParseError::InvalidSyntax);
+    }
+    let millis = digits
+        .parse::<u128>()
+        .map_err(|_| DurationParseError::OutOfRange)?;
+    DurationUnit::Milliseconds
+        .duration_from_u128(millis)
+        .map_err(|_| DurationParseError::OutOfRange)
+}
 
 /// Serializes a [`Duration`] as rounded whole milliseconds with an `ms`
 /// suffix.
@@ -35,7 +65,10 @@ pub use super::duration_with_unit::{deserialize, parse};
 /// # Errors
 ///
 /// Returns the serializer error if writing the string value fails.
-pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize<S>(
+    duration: &Duration,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

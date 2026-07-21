@@ -9,96 +9,33 @@
 //!
 //! Serialization selects the largest supported unit that represents the value
 //! without losing precision. Zero is represented as `0ms`.
-//! Deserialization accepts strings with `ns`, `us`, `ms`, `s`, `m`, `h`, or
-//! `d` suffixes, and also accepts a bare integer as milliseconds
-//! for lenient configuration input.
+//! Deserialization accepts strict strings with `ns`, `us`, `µs`, `μs`, `ms`,
+//! `s`, `min`, `h`, or `d` suffixes.
 
-use std::fmt;
 use std::time::Duration;
 
 use qubit_datatype::{
-    DurationParseError, DurationTextOptions, DurationUnit, DurationUnitSuffixSet,
-    SuffixlessDurationPolicy, format_duration_exact, parse_duration_text,
+    format_duration_exact,
+    parse_duration_text,
+    DurationParseError,
+    DurationTextOptions,
+    DurationUnitParseMode,
+    SuffixlessDurationPolicy,
 };
-use serde::de::{Error as DeserializeError, Unexpected, Visitor};
-use serde::{Deserializer, Serializer};
+use serde::de::Error as DeserializeError;
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serializer,
+};
 
-/// ASCII Duration text profile with suffixless milliseconds.
+/// Strict Duration text profile.
 const DURATION_TEXT_OPTIONS: DurationTextOptions = DurationTextOptions::new(
-    SuffixlessDurationPolicy::Assume(DurationUnit::Milliseconds),
-    DurationUnitSuffixSet::Ascii,
+    SuffixlessDurationPolicy::Reject,
+    DurationUnitParseMode::Strict,
 );
 
-/// Visitor for the shared unit-suffixed duration input protocol.
-struct DurationVisitor;
-
-impl<'de> Visitor<'de> for DurationVisitor {
-    type Value = Duration;
-
-    #[inline(always)]
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(
-            "a duration string with an optional unit or a non-negative \
-             millisecond integer",
-        )
-    }
-
-    #[inline(always)]
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: DeserializeError,
-    {
-        parse(value).map_err(E::custom)
-    }
-
-    #[inline(always)]
-    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-    where
-        E: DeserializeError,
-    {
-        self.visit_str(&value)
-    }
-
-    #[inline(always)]
-    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
-    where
-        E: DeserializeError,
-    {
-        duration_from_millis(u128::from(value))
-    }
-
-    #[inline(always)]
-    fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E>
-    where
-        E: DeserializeError,
-    {
-        duration_from_millis(value)
-    }
-
-    #[inline(always)]
-    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
-    where
-        E: DeserializeError,
-    {
-        match u64::try_from(value) {
-            Ok(value) => self.visit_u64(value),
-            Err(_) => Err(E::invalid_value(Unexpected::Signed(value), &self)),
-        }
-    }
-
-    #[inline(always)]
-    fn visit_i128<E>(self, value: i128) -> Result<Self::Value, E>
-    where
-        E: DeserializeError,
-    {
-        match u128::try_from(value) {
-            Ok(value) => self.visit_u128(value),
-            Err(_) => Err(E::custom("duration integer must be a non-negative value")),
-        }
-    }
-}
-
-/// Serializes a [`Duration`] as an exact string such as `"500us"`.
+/// Serializes a [`Duration`] as an exact string such as `"500µs"`.
 ///
 /// # Parameters
 /// - `duration`: Duration to serialize.
@@ -109,7 +46,10 @@ impl<'de> Visitor<'de> for DurationVisitor {
 ///
 /// # Errors
 /// Returns the serializer error if writing the string value fails.
-pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize<S>(
+    duration: &Duration,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -117,11 +57,10 @@ where
     serializer.serialize_str(&text)
 }
 
-/// Deserializes a [`Duration`] from an exact unit-suffixed string, or a bare
-/// millisecond integer.
+/// Deserializes a [`Duration`] from an exact strict unit-suffixed string.
 ///
 /// # Parameters
-/// - `deserializer`: Serde deserializer providing a string or integer value.
+/// - `deserializer`: Serde deserializer providing a string value.
 ///
 /// # Returns
 /// The parsed [`Duration`].
@@ -133,11 +72,8 @@ pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
 {
-    if deserializer.is_human_readable() {
-        deserializer.deserialize_any(DurationVisitor)
-    } else {
-        deserializer.deserialize_str(DurationVisitor)
-    }
+    let text = String::deserialize(deserializer)?;
+    parse(&text).map_err(DeserializeError::custom)
 }
 
 /// Formats a [`Duration`] with the largest exact supported unit.
@@ -146,7 +82,7 @@ where
 /// - `duration`: Duration to format.
 ///
 /// # Returns
-/// A canonical unit-suffixed string. Zero is formatted as `0ms`.
+/// A preferred unit-suffixed string. Zero is formatted as `0ms`.
 #[inline]
 pub fn format(duration: &Duration) -> String {
     format_duration_exact(*duration)
@@ -154,8 +90,8 @@ pub fn format(duration: &Duration) -> String {
 
 /// Parses a [`Duration`] from a string with a supported unit.
 ///
-/// Bare integers are treated as milliseconds. Supported suffixes are `ns`,
-/// `us`, `ms`, `s`, `m`, `h`, and `d`.
+/// Supported strict suffixes are `ns`, `us`, `µs`, `μs`, `ms`, `s`, `min`,
+/// `h`, and `d`. Bare integers and the Lenient-only `m` alias are rejected.
 ///
 /// # Parameters
 /// - `text`: Duration text to parse.
@@ -164,35 +100,12 @@ pub fn format(duration: &Duration) -> String {
 /// The parsed [`Duration`].
 ///
 /// # Errors
-/// Returns [`DurationParseError::InvalidSyntax`] for non-canonical text,
-/// [`DurationParseError::UnsupportedUnit`] for an unknown ASCII unit, and
+/// Returns [`DurationParseError::InvalidSyntax`] for malformed text,
+/// [`DurationParseError::NonCanonicalUnit`] for a supported alias,
+/// [`DurationParseError::UnsupportedUnit`] for an unknown unit, and
 /// [`DurationParseError::OutOfRange`] when the value cannot fit in a
 /// [`Duration`].
 #[inline(always)]
 pub fn parse(text: &str) -> Result<Duration, DurationParseError> {
     parse_duration_text(text, &DURATION_TEXT_OPTIONS)
-}
-
-/// Converts a non-negative millisecond count from a Serde integer token.
-///
-/// # Parameters
-///
-/// - `millis`: Millisecond count supplied by a human-readable deserializer.
-///
-/// # Returns
-///
-/// The represented duration.
-///
-/// # Errors
-///
-/// Returns the deserializer's custom error when the count exceeds
-/// [`Duration`]'s range.
-#[inline(always)]
-fn duration_from_millis<E>(millis: u128) -> Result<Duration, E>
-where
-    E: DeserializeError,
-{
-    DurationUnit::Milliseconds
-        .duration_from_u128(millis)
-        .map_err(|_| E::custom(DurationParseError::OutOfRange))
 }

@@ -30,20 +30,20 @@ Qubit Serde 收集可在 Rust 库之间复用的小型 serde 适配器。当前�
 
 ### 精确的带单位 Duration 字符串
 
-- `duration_with_unit` 会选择能够精确表示 duration 的最大单位，输出如 `2m`、
-  `2500ms`、`500us` 或 `42ns`。
+- `duration_with_unit` 会选择能够精确表示 duration 的最大单位，输出如 `2min`、
+  `2500ms`、`500µs` 或 `42ns`。
 - 精确格式可以 round-trip 所有 `Duration`，包括 `Duration::MAX`。
-- 反序列化接受带 `ns`、`us`、`ms`、`s`、`m`、`h`、`d` 的字符串。
-- 裸整数输入会按毫秒处理，便于宽松配置解析。
+- 反序列化接受带 `ns`、`us`、`µs`、`μs`、`ms`、`s`、`min`、`h`、`d` 的
+  Strict 字符串；仅 Lenient 接受的 `m` 别名会被拒绝。
 - Duration 文本必须使用规范形式，不会被隐式 trim。
 - 无效单位、无效数字、小数值和溢出都会被拒绝。
 - 直接调用解析函数会返回 `qubit_datatype::DurationParseError`。
 
 ### 带单位的舍入毫秒字符串
 
-- `duration_millis_with_unit` 始终序列化为 `<舍入后的毫秒>ms`。
+- `duration_millis_with_unit` 的序列化和反序列化都严格使用
+  `<舍入后的毫秒>ms` wire 格式。
 - 它使用半向上舍入，会有意丢失亚毫秒精度，适合展示和兼容配置格式。
-- 它与 `duration_with_unit` 共享反序列化和结构化解析语义。
 
 ## 安装
 

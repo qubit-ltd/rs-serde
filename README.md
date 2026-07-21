@@ -35,21 +35,20 @@ modules.
 ### Exact Duration with Units
 
 - `duration_with_unit` selects the largest unit that represents the duration
-  exactly, producing values such as `2m`, `2500ms`, `500us`, or `42ns`.
+  exactly, producing values such as `2min`, `2500ms`, `500µs`, or `42ns`.
 - Exact formatting round-trips every `Duration`, including `Duration::MAX`.
-- Deserialization accepts strings with `ns`, `us`, `ms`, `s`, `m`, `h`, or `d`.
-- Bare integer input is accepted as milliseconds for lenient configuration parsing.
+- Deserialization accepts strict strings with `ns`, `us`, `µs`, `μs`, `ms`,
+  `s`, `min`, `h`, or `d`; the Lenient-only `m` alias is rejected.
 - Duration text is canonical and is not implicitly trimmed.
 - Invalid units, invalid numbers, fractional values, and overflows are rejected.
 - Direct parsing returns `qubit_datatype::DurationParseError`.
 
 ### Rounded Milliseconds with a Unit
 
-- `duration_millis_with_unit` always serializes as `<rounded-millis>ms`.
+- `duration_millis_with_unit` uses the strict `<rounded-millis>ms` wire form
+  for both serialization and deserialization.
 - It uses half-up rounding and is intentionally lossy for sub-millisecond
   values, making it suitable for displays and compatibility configuration.
-- It shares the same deserialization and structured parsing behavior as
-  `duration_with_unit`.
 
 ## Installation
 
