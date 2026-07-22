@@ -32,7 +32,7 @@ doctest = true
 test = true
 
 [dependencies]
-qubit-datatype = { version = "0.8", path = "../rs-datatype", default-features = false, features = ["duration"] }
+qubit-datatype = { version = "0.8", default-features = false, features = ["duration"] }
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
