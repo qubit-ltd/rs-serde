@@ -12,7 +12,14 @@
 #[path = "serde/mod.rs"]
 mod serde_impl;
 
-/// Reusable serde adapters.
+/// Serde adapters for common standard-library and Qubit value types.
+///
+/// Use these modules with `#[serde(with = "...")]` when a field requires a
+/// stable interchange format.
 pub mod serde {
-    pub use super::serde_impl::*;
+    pub use super::serde_impl::{
+        duration_millis,
+        duration_millis_with_unit,
+        duration_with_unit,
+    };
 }

@@ -8,8 +8,9 @@
 //! Lossy Serde adapter for [`std::time::Duration`] as millisecond text.
 //!
 //! Serialization rounds to the nearest whole millisecond using half-up
-//! rounding and appends `ms`. Deserialization accepts only the matching
-//! canonical `<integer>ms` form.
+//! rounding, saturates at the largest whole-millisecond value representable by
+//! [`std::time::Duration`], and appends `ms`. Deserialization accepts only the
+//! matching, untrimmed `<integer>ms` grammar.
 
 use std::time::Duration;
 
@@ -25,7 +26,22 @@ use serde::{
 
 use super::duration_millis::rounded_millis;
 
-/// Deserializes only the canonical millisecond text representation.
+/// Deserializes fixed millisecond text matching the required grammar.
+///
+/// # Parameters
+///
+/// - `deserializer`: Serde deserializer providing a string value.
+///
+/// # Returns
+///
+/// The parsed [`Duration`] with millisecond precision.
+///
+/// # Errors
+///
+/// Returns the deserializer error when the input is not a string, does not
+/// match the untrimmed `<integer>ms` grammar, exceeds `u128`, or represents a
+/// value outside the range of [`Duration`].
+#[inline(always)]
 pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
@@ -34,7 +50,38 @@ where
     parse(&text).map_err(serde::de::Error::custom)
 }
 
-/// Parses a non-negative whole millisecond count with the canonical ms symbol.
+/// Parses a non-negative whole millisecond count with the canonical `ms`
+/// symbol.
+///
+/// The input is not trimmed and must match `<integer>ms` exactly.
+///
+/// # Parameters
+///
+/// - `text`: Millisecond text to parse.
+///
+/// # Returns
+///
+/// The parsed [`Duration`] with millisecond precision.
+///
+/// # Errors
+///
+/// Returns [`DurationParseError::InvalidSyntax`] when `text` does not match the
+/// required grammar. Returns [`DurationParseError::OutOfRange`] when the
+/// integer exceeds `u128` or the value cannot fit in a [`Duration`].
+///
+/// # Examples
+///
+/// ```
+/// use std::time::Duration;
+///
+/// use qubit_serde::serde::duration_millis_with_unit;
+///
+/// assert_eq!(
+///     duration_millis_with_unit::parse("42ms"),
+///     Ok(Duration::from_millis(42))
+/// );
+/// ```
+#[inline(always)]
 pub fn parse(text: &str) -> Result<Duration, DurationParseError> {
     let Some(digits) = text.strip_suffix("ms") else {
         return Err(DurationParseError::InvalidSyntax);
@@ -65,6 +112,7 @@ pub fn parse(text: &str) -> Result<Duration, DurationParseError> {
 /// # Errors
 ///
 /// Returns the serializer error if writing the string value fails.
+#[inline(always)]
 pub fn serialize<S>(
     duration: &Duration,
     serializer: S,
@@ -83,9 +131,12 @@ where
 ///
 /// # Returns
 ///
-/// A string in the form `<rounded-millis>ms`.
-#[inline(always)]
+/// A string in the form `<rounded-millis>ms`. Values whose half-up result would
+/// exceed [`Duration::MAX`] saturate at `18446744073709551615999ms`, the
+/// largest millisecond value accepted by [`parse`].
+#[must_use]
+#[inline]
 pub fn format(duration: &Duration) -> String {
-    let millis = rounded_millis(*duration);
+    let millis = rounded_millis(*duration).min(Duration::MAX.as_millis());
     format!("{millis}ms")
 }
