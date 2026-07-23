@@ -1,11 +1,37 @@
 # Qubit Serde
 
+> [!WARNING]
+> **Deprecated**
+>
+> This crate and repository are no longer maintained. All published
+> `qubit-serde` versions have been yanked from crates.io. The duration Serde
+> adapters have moved to
+> [`qubit-datatype`](https://github.com/qubit-ltd/rs-datatype) 0.9 and are
+> available through its `duration` feature.
+
+Replace the dependency with:
+
+```toml
+[dependencies]
+qubit-datatype = { version = "0.9", default-features = false, features = ["duration"] }
+```
+
+Update adapter paths as follows:
+
+- `qubit_serde::serde::duration_millis` → `qubit_datatype::serde::duration_millis`
+- `qubit_serde::serde::duration_millis_with_unit` → `qubit_datatype::serde::duration_millis_with_unit`
+- `qubit_serde::serde::duration_with_unit` → `qubit_datatype::serde::duration_with_unit`
+
+The content below is retained as historical documentation for existing users.
+
 [![Rust CI](https://github.com/qubit-ltd/rs-serde/actions/workflows/ci.yml/badge.svg)](https://github.com/qubit-ltd/rs-serde/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://qubit-ltd.github.io/rs-serde/coverage-badge.json)](https://qubit-ltd.github.io/rs-serde/coverage/)
 [![Crates.io](https://img.shields.io/crates/v/qubit-serde.svg?color=blue)](https://crates.io/crates/qubit-serde)
 [![Rust](https://img.shields.io/badge/rust-1.94+-blue.svg?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![中文文档](https://img.shields.io/badge/文档-中文版-blue.svg)](README.zh_CN.md)
+
+## Historical Documentation
 
 Reusable serde adapters and utilities for Rust.
 
@@ -35,21 +61,24 @@ modules.
 ### Exact Duration with Units
 
 - `duration_with_unit` selects the largest unit that represents the duration
-  exactly, producing values such as `2m`, `2500ms`, `500us`, or `42ns`.
+  exactly, producing values such as `2min`, `2500ms`, `500µs`, or `42ns`.
 - Exact formatting round-trips every `Duration`, including `Duration::MAX`.
-- Deserialization accepts strings with `ns`, `us`, `ms`, `s`, `m`, `h`, or `d`.
-- Bare integer input is accepted as milliseconds for lenient configuration parsing.
-- Duration text is canonical and is not implicitly trimmed.
+- Deserialization accepts strict strings with `ns`, `us`, `µs`, `μs`, `ms`,
+  `s`, `min`, `h`, or `d`; the Lenient-only `m` alias is rejected.
+- Serialization emits a preferred exact form, while deserialization accepts
+  the documented strict grammar without implicitly trimming input.
 - Invalid units, invalid numbers, fractional values, and overflows are rejected.
-- Direct parsing returns the structured `ParseDurationError` type.
+- Direct parsing returns `qubit_datatype::DurationParseError`.
 
 ### Rounded Milliseconds with a Unit
 
-- `duration_millis_with_unit` always serializes as `<rounded-millis>ms`.
+- `duration_millis_with_unit` uses the strict `<rounded-millis>ms` wire form
+  for both serialization and deserialization.
 - It uses half-up rounding and is intentionally lossy for sub-millisecond
   values, making it suitable for displays and compatibility configuration.
-- It shares the same deserialization and structured parsing behavior as
-  `duration_with_unit`.
+- Near `Duration::MAX`, formatting saturates at
+  `18446744073709551615999ms`, the largest whole-millisecond value that can be
+  parsed back into a `Duration`.
 
 ## Installation
 
@@ -57,7 +86,9 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-serde = "0.3"
+qubit-serde = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 ```
 
 ## Quick Start
@@ -136,76 +167,54 @@ assert_eq!(state.elapsed, Duration::from_millis(250));
 - [`serde::duration_millis_with_unit`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_millis_with_unit/index.html) - duration as rounded millisecond text.
 - [`serde::duration_with_unit`](https://docs.rs/qubit-serde/latest/qubit_serde/serde/duration_with_unit/index.html) - exact duration strings with automatically selected units.
 
-## Testing & Code Coverage
-
-This project maintains tests for serialization, deserialization, exact and
-rounded semantics, non-self-describing formats, invalid inputs, and overflow
-cases.
-
-### Running Tests
-
-```bash
-# Run all tests
-cargo test
-
-# Run with coverage report
-./coverage.sh
-
-# Generate text format report
-./coverage.sh text
-
-# Run CI checks (format, clippy, test, coverage, audit)
-./ci-check.sh
-```
-
-### Coverage Metrics
-
-See [COVERAGE.md](COVERAGE.md) for detailed coverage statistics.
-
 ## Dependencies
 
 Runtime dependencies:
 
 - `serde` for serialization and deserialization integration.
-- `thiserror` for structured parsing errors.
+- `qubit-datatype` for duration units, exact formatting, and structured
+  duration parsing errors.
+
+Callers that match `DurationParseError` variants directly should also declare
+`qubit-datatype` as a direct dependency instead of relying on this crate's
+transitive dependency.
+
+## Related Projects
+
+More Rust libraries from Qubit are published under the
+[qubit-ltd](https://github.com/qubit-ltd) organization on GitHub.
+
+## Testing
+
+```bash
+# Run tests with the default feature set
+cargo test
+
+# Run tests with all declared features
+cargo test --all-features
+
+# Project CI checks
+./ci-check.sh
+
+# Check code coverage
+./coverage.sh
+```
 
 ## License
 
-Copyright (c) 2025 - 2026. Haixing Hu, Qubit Co. Ltd. All rights reserved.
+Copyright (c) 2025 - 2026. Haixing Hu. All rights reserved.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-See [LICENSE](LICENSE) for the full license text.
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the
+full license text.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Guidelines
-
-- Follow the Rust API guidelines.
-- Keep adapters small, documented, and explicit about conversion semantics.
-- Add tests for success paths, invalid input, and boundary conditions.
-- Run `./ci-check.sh` before submitting PRs.
+Contributions are welcome. Please follow the Rust API guidelines, keep public
+API documentation and tests current, and run `./align-ci.sh` to format code and
+`./ci-check.sh` to satisfy CI requirements before submitting a pull request.
 
 ## Author
 
 **Haixing Hu** - *Qubit Co. Ltd.*
-
-## Related Projects
-
-More Rust libraries from Qubit are published under the [qubit-ltd](https://github.com/qubit-ltd) organization on GitHub.
-
----
 
 Repository: [https://github.com/qubit-ltd/rs-serde](https://github.com/qubit-ltd/rs-serde)

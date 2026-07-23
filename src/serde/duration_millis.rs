@@ -12,15 +12,13 @@
 
 use std::time::Duration;
 
+use qubit_datatype::DurationUnit;
 use serde::ser::Error as SerializeError;
 use serde::{
     Deserialize,
     Deserializer,
     Serializer,
 };
-
-/// Number of nanoseconds in one millisecond.
-const NANOS_PER_MILLISECOND: u128 = 1_000_000;
 
 /// Converts a duration to whole milliseconds using half-up rounding.
 ///
@@ -31,26 +29,28 @@ const NANOS_PER_MILLISECOND: u128 = 1_000_000;
 /// # Returns
 ///
 /// The rounded millisecond count.
+#[must_use]
 #[inline(always)]
 pub(super) fn rounded_millis(duration: Duration) -> u128 {
-    let total_nanos = duration.as_nanos();
-    let millis = total_nanos / NANOS_PER_MILLISECOND;
-    let remainder = total_nanos % NANOS_PER_MILLISECOND;
-    millis + u128::from(remainder >= NANOS_PER_MILLISECOND / 2)
+    DurationUnit::Milliseconds.rounded_units(duration)
 }
 
 /// Serializes a [`Duration`] as a rounded `u64` millisecond count.
 ///
 /// # Parameters
+///
 /// - `duration`: Duration to serialize.
 /// - `serializer`: Serde serializer receiving the millisecond count.
 ///
 /// # Returns
+///
 /// The serializer result.
 ///
 /// # Errors
+///
 /// Returns the serializer error if converting or writing the integer value
 /// fails.
+#[inline]
 pub fn serialize<S>(
     duration: &Duration,
     serializer: S,
@@ -66,13 +66,17 @@ where
 /// Deserializes a [`Duration`] from a `u64` millisecond count.
 ///
 /// # Parameters
+///
 /// - `deserializer`: Serde deserializer providing a millisecond count.
 ///
 /// # Returns
+///
 /// A [`Duration`] with millisecond precision.
 ///
 /// # Errors
+///
 /// Returns the deserializer error when the input is not a valid `u64`.
+#[inline(always)]
 pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
