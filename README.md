@@ -1,11 +1,37 @@
 # Qubit Serde
 
+> [!WARNING]
+> **Deprecated**
+>
+> This crate and repository are no longer maintained. All published
+> `qubit-serde` versions have been yanked from crates.io. The duration Serde
+> adapters have moved to
+> [`qubit-datatype`](https://github.com/qubit-ltd/rs-datatype) 0.9 and are
+> available through its `duration` feature.
+
+Replace the dependency with:
+
+```toml
+[dependencies]
+qubit-datatype = { version = "0.9", default-features = false, features = ["duration"] }
+```
+
+Update adapter paths as follows:
+
+- `qubit_serde::serde::duration_millis` → `qubit_datatype::serde::duration_millis`
+- `qubit_serde::serde::duration_millis_with_unit` → `qubit_datatype::serde::duration_millis_with_unit`
+- `qubit_serde::serde::duration_with_unit` → `qubit_datatype::serde::duration_with_unit`
+
+The content below is retained as historical documentation for existing users.
+
 [![Rust CI](https://github.com/qubit-ltd/rs-serde/actions/workflows/ci.yml/badge.svg)](https://github.com/qubit-ltd/rs-serde/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://qubit-ltd.github.io/rs-serde/coverage-badge.json)](https://qubit-ltd.github.io/rs-serde/coverage/)
 [![Crates.io](https://img.shields.io/crates/v/qubit-serde.svg?color=blue)](https://crates.io/crates/qubit-serde)
 [![Rust](https://img.shields.io/badge/rust-1.94+-blue.svg?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![中文文档](https://img.shields.io/badge/文档-中文版-blue.svg)](README.zh_CN.md)
+
+## Historical Documentation
 
 Reusable serde adapters and utilities for Rust.
 

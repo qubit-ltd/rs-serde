@@ -1,11 +1,36 @@
 # Qubit Serde
 
+> [!WARNING]
+> **已弃用**
+>
+> 本 crate 和仓库已停止维护。crates.io 上所有已发布的 `qubit-serde`
+> 版本均已 yank。Duration Serde 适配器已迁移到
+> [`qubit-datatype`](https://github.com/qubit-ltd/rs-datatype) 0.9，并通过其
+> `duration` feature 提供。
+
+请将依赖替换为：
+
+```toml
+[dependencies]
+qubit-datatype = { version = "0.9", default-features = false, features = ["duration"] }
+```
+
+适配器路径迁移如下：
+
+- `qubit_serde::serde::duration_millis` → `qubit_datatype::serde::duration_millis`
+- `qubit_serde::serde::duration_millis_with_unit` → `qubit_datatype::serde::duration_millis_with_unit`
+- `qubit_serde::serde::duration_with_unit` → `qubit_datatype::serde::duration_with_unit`
+
+以下内容作为历史文档保留，供现有用户参考。
+
 [![Rust CI](https://github.com/qubit-ltd/rs-serde/actions/workflows/ci.yml/badge.svg)](https://github.com/qubit-ltd/rs-serde/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://qubit-ltd.github.io/rs-serde/coverage-badge.json)](https://qubit-ltd.github.io/rs-serde/coverage/)
 [![Crates.io](https://img.shields.io/crates/v/qubit-serde.svg?color=blue)](https://crates.io/crates/qubit-serde)
 [![Rust](https://img.shields.io/badge/rust-1.94+-blue.svg?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![English Document](https://img.shields.io/badge/Document-English-blue.svg)](README.md)
+
+## 历史文档
 
 面向 Rust 的可复用 serde 适配器和工具库。
 
