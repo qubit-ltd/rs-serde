@@ -9,31 +9,19 @@
 
 use std::time::Duration;
 
-use qubit_serde::serde::duration_with_unit::{
-    self,
-    ParseDurationError,
-};
+use qubit_datatype::DurationParseError;
+use qubit_serde::serde::duration_with_unit;
 use serde::de::value::{
     Error as ValueError,
-    I64Deserializer,
-    I128Deserializer,
     StringDeserializer,
-    U128Deserializer,
-};
-use serde::{
-    Deserialize,
-    Serialize,
 };
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Holder {
-    #[serde(with = "qubit_serde::serde::duration_with_unit")]
-    duration: Duration,
-}
+use super::internal::DurationWithUnitHolder;
 
+/// Verifies exact Duration serialization emits a unit-suffixed string.
 #[test]
 fn test_duration_with_unit_serialize_as_exact_string() {
-    let holder = Holder {
+    let holder = DurationWithUnitHolder {
         duration: Duration::from_millis(1500),
     };
 
@@ -43,40 +31,45 @@ fn test_duration_with_unit_serialize_as_exact_string() {
     assert_eq!(json, r#"{"duration":"1500ms"}"#);
 }
 
+/// Verifies strict supported unit spellings deserialize correctly.
 #[test]
 fn test_duration_with_unit_deserialize_from_supported_units() {
     let cases = [
-        ("42", Duration::from_millis(42)),
         ("42ns", Duration::from_nanos(42)),
         ("42us", Duration::from_micros(42)),
+        ("42µs", Duration::from_micros(42)),
+        ("42μs", Duration::from_micros(42)),
         ("42ms", Duration::from_millis(42)),
         ("42s", Duration::from_secs(42)),
-        ("2m", Duration::from_secs(120)),
+        ("2min", Duration::from_secs(120)),
         ("2h", Duration::from_secs(7200)),
         ("2d", Duration::from_secs(172800)),
     ];
 
     for (text, expected) in cases {
         let json = format!(r#"{{"duration":"{text}"}}"#);
-        let holder: Holder =
+        let holder: DurationWithUnitHolder =
             serde_json::from_str(&json).expect("duration should deserialize");
         assert_eq!(holder.duration, expected);
     }
 
-    for unsupported in ["42µs", "42μs"] {
+    {
+        let unsupported = "42m";
         let json = format!(r#"{{"duration":"{unsupported}"}}"#);
-        assert!(serde_json::from_str::<Holder>(&json).is_err());
+        assert!(serde_json::from_str::<DurationWithUnitHolder>(&json).is_err());
     }
 }
 
+/// Verifies the exact adapter rejects integer input.
 #[test]
 fn test_duration_with_unit_deserialize_from_integer_millis() {
-    let holder: Holder = serde_json::from_str(r#"{"duration":250}"#)
-        .expect("duration should deserialize");
-
-    assert_eq!(holder.duration, Duration::from_millis(250));
+    assert!(
+        serde_json::from_str::<DurationWithUnitHolder>(r#"{"duration":250}"#)
+            .is_err()
+    );
 }
 
+/// Verifies the exact adapter accepts an owned string deserializer.
 #[test]
 fn test_duration_with_unit_deserialize_from_owned_string() {
     let deserializer =
@@ -87,59 +80,29 @@ fn test_duration_with_unit_deserialize_from_owned_string() {
     assert_eq!(duration, Duration::from_nanos(42));
 }
 
+/// Verifies the exact adapter rejects non-string scalar input.
 #[test]
-fn test_duration_with_unit_deserialize_from_wide_unsigned_integer() {
-    let millis = u128::from(u64::MAX) * 1_000 + 999;
-    let deserializer = U128Deserializer::<ValueError>::new(millis);
-    let duration = duration_with_unit::deserialize(deserializer)
-        .expect("wide millisecond count should deserialize");
-
-    assert_eq!(duration, Duration::new(u64::MAX, 999_000_000));
+fn test_duration_with_unit_deserialize_rejects_non_string_scalars() {
+    for json in ["250", "-1", "1.5", "true"] {
+        let document = format!(r#"{{"duration":{json}}}"#);
+        assert!(
+            serde_json::from_str::<DurationWithUnitHolder>(&document).is_err(),
+            "expected non-string input to fail: {document}"
+        );
+    }
 }
 
+/// Verifies the exact adapter rejects unsupported units through serde.
 #[test]
-fn test_duration_with_unit_deserialize_from_signed_integers() {
-    let i64_deserializer = I64Deserializer::<ValueError>::new(250);
-    let i64_duration = duration_with_unit::deserialize(i64_deserializer)
-        .expect("signed millisecond count should deserialize");
-    let i128_deserializer = I128Deserializer::<ValueError>::new(500);
-    let i128_duration = duration_with_unit::deserialize(i128_deserializer)
-        .expect("wide signed millisecond count should deserialize");
-
-    assert_eq!(i64_duration, Duration::from_millis(250));
-    assert_eq!(i128_duration, Duration::from_millis(500));
-}
-
-#[test]
-fn test_duration_with_unit_deserialize_rejects_negative_signed_integers() {
-    let i64_result =
-        duration_with_unit::deserialize(I64Deserializer::<ValueError>::new(-1));
-    let i128_result = duration_with_unit::deserialize(I128Deserializer::<
-        ValueError,
-    >::new(-1));
-
-    assert!(i64_result.is_err());
-    assert!(i128_result.is_err());
-}
-
-#[test]
-fn test_duration_with_unit_deserialize_rejects_wide_integer_overflow() {
-    let millis = (u128::from(u64::MAX) + 1) * 1_000;
-    let result = duration_with_unit::deserialize(
-        U128Deserializer::<ValueError>::new(millis),
+fn test_duration_with_unit_rejects_invalid_unit() {
+    let result = serde_json::from_str::<DurationWithUnitHolder>(
+        r#"{"duration":"250fortnights"}"#,
     );
 
     assert!(result.is_err());
 }
 
-#[test]
-fn test_duration_with_unit_rejects_invalid_unit() {
-    let result =
-        serde_json::from_str::<Holder>(r#"{"duration":"250fortnights"}"#);
-
-    assert!(result.is_err());
-}
-
+/// Verifies exact formatting emits the expected millisecond text.
 #[test]
 fn test_duration_with_unit_format() {
     let text = duration_with_unit::format(&Duration::from_millis(500));
@@ -147,16 +110,17 @@ fn test_duration_with_unit_format() {
     assert_eq!(text, "500ms");
 }
 
+/// Verifies exact formatting selects the largest lossless unit.
 #[test]
 fn test_duration_with_unit_format_selects_largest_exact_unit() {
     let cases = [
         (Duration::ZERO, "0ms"),
         (Duration::from_secs(2 * 24 * 60 * 60), "2d"),
         (Duration::from_secs(2 * 60 * 60), "2h"),
-        (Duration::from_secs(2 * 60), "2m"),
+        (Duration::from_secs(2 * 60), "2min"),
         (Duration::from_secs(42), "42s"),
         (Duration::from_millis(2500), "2500ms"),
-        (Duration::from_micros(500), "500us"),
+        (Duration::from_micros(500), "500µs"),
         (Duration::from_nanos(42), "42ns"),
     ];
 
@@ -165,18 +129,20 @@ fn test_duration_with_unit_format_selects_largest_exact_unit() {
     }
 }
 
+/// Verifies exact serialization preserves sub-millisecond precision.
 #[test]
 fn test_duration_with_unit_serialize_preserves_sub_millisecond_precision() {
-    let holder = Holder {
+    let holder = DurationWithUnitHolder {
         duration: Duration::from_micros(1500),
     };
 
     let json =
         serde_json::to_string(&holder).expect("duration should serialize");
 
-    assert_eq!(json, r#"{"duration":"1500us"}"#);
+    assert_eq!(json, r#"{"duration":"1500µs"}"#);
 }
 
+/// Verifies exact formatting round-trips Duration::MAX.
 #[test]
 fn test_duration_with_unit_format_round_trips_duration_max() {
     let text = duration_with_unit::format(&Duration::MAX);
@@ -186,6 +152,7 @@ fn test_duration_with_unit_format_round_trips_duration_max() {
     assert_eq!(parsed, Duration::MAX);
 }
 
+/// Verifies exact formatting round-trips semantic unit boundaries.
 #[test]
 fn test_duration_with_unit_format_round_trips_semantic_boundaries() {
     let seconds = [
@@ -223,6 +190,7 @@ fn test_duration_with_unit_format_round_trips_semantic_boundaries() {
     }
 }
 
+/// Verifies exact parsing rejects empty or whitespace-only text.
 #[test]
 fn test_duration_with_unit_parse_rejects_empty_text() {
     let result = duration_with_unit::parse(" ");
@@ -230,25 +198,35 @@ fn test_duration_with_unit_parse_rejects_empty_text() {
     assert!(result.is_err());
 }
 
-/// Test duration text is not implicitly trimmed by the adapter.
+/// Verifies exact Duration text is not implicitly trimmed.
 #[test]
 fn test_duration_with_unit_parse_rejects_surrounding_whitespace() {
     assert!(duration_with_unit::parse(" 2ms ").is_err());
-    assert!(serde_json::from_str::<Holder>(r#"{"duration":" 2ms "}"#).is_err());
+    assert!(
+        serde_json::from_str::<DurationWithUnitHolder>(
+            r#"{"duration":" 2ms "}"#
+        )
+        .is_err()
+    );
 }
 
+/// Verifies exact parsing rejects suffixless numbers.
 #[test]
-fn test_duration_with_unit_parse_treats_bare_numbers_as_milliseconds() {
-    let duration =
-        duration_with_unit::parse("2").expect("duration should parse");
-
-    assert_eq!(duration, Duration::from_millis(2));
+fn test_duration_with_unit_parse_rejects_bare_numbers() {
+    assert!(duration_with_unit::parse("2").is_err());
 }
 
+/// Verifies serde rejects invalid numbers and non-scalar values.
 #[test]
 fn test_duration_with_unit_deserialize_rejects_invalid_number_and_non_scalar() {
-    assert!(serde_json::from_str::<Holder>(r#"{"duration":-1}"#).is_err());
-    assert!(serde_json::from_str::<Holder>(r#"{"duration":1.5}"#).is_err());
+    assert!(
+        serde_json::from_str::<DurationWithUnitHolder>(r#"{"duration":-1}"#)
+            .is_err()
+    );
+    assert!(
+        serde_json::from_str::<DurationWithUnitHolder>(r#"{"duration":1.5}"#)
+            .is_err()
+    );
     for json in [
         r#"{"duration":null}"#,
         r#"{"duration":true}"#,
@@ -256,76 +234,57 @@ fn test_duration_with_unit_deserialize_rejects_invalid_number_and_non_scalar() {
         r#"{"duration":{}}"#,
     ] {
         assert!(
-            serde_json::from_str::<Holder>(json).is_err(),
+            serde_json::from_str::<DurationWithUnitHolder>(json).is_err(),
             "expected error for {json}"
         );
     }
 }
 
+/// Verifies exact parsing reports syntax, unit, and range failures.
 #[test]
 fn test_duration_with_unit_parse_errors_and_overflows() {
     assert!(duration_with_unit::parse("18446744073709551616000ns").is_ok());
-    assert!(duration_with_unit::parse("18446744073709551616").is_ok());
+    assert!(duration_with_unit::parse("18446744073709551616").is_err());
 
     assert_eq!(
         duration_with_unit::parse("340282366920938463463374607431768211456ns"),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
     assert_eq!(
         duration_with_unit::parse(&format!("{}s", u128::MAX)),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
     assert_eq!(
         duration_with_unit::parse("x12ms"),
-        Err(ParseDurationError::InvalidSyntax)
+        Err(DurationParseError::InvalidSyntax)
     );
     assert_eq!(
         duration_with_unit::parse("12.5s"),
-        Err(ParseDurationError::InvalidSyntax)
+        Err(DurationParseError::InvalidSyntax)
     );
     assert_eq!(
         duration_with_unit::parse("12fortnights"),
-        Err(ParseDurationError::UnsupportedUnit {
-            unit: "fortnights".to_string(),
-        })
+        Err(DurationParseError::UnsupportedUnit)
     );
 
     let vm = u64::MAX / 60 + 1;
     assert_eq!(
-        duration_with_unit::parse(&format!("{vm}m")),
-        Err(ParseDurationError::OutOfRange)
+        duration_with_unit::parse(&format!("{vm}min")),
+        Err(DurationParseError::OutOfRange)
     );
     let vh = u64::MAX / (60 * 60) + 1;
     assert_eq!(
         duration_with_unit::parse(&format!("{vh}h")),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
     let vd = u64::MAX / (24 * 60 * 60) + 1;
     assert_eq!(
         duration_with_unit::parse(&format!("{vd}d")),
-        Err(ParseDurationError::OutOfRange)
+        Err(DurationParseError::OutOfRange)
     );
 }
 
-#[test]
-fn test_parse_duration_error_display() {
-    assert_eq!(
-        ParseDurationError::InvalidSyntax.to_string(),
-        "invalid duration syntax; expected [0-9]+(ns|us|ms|s|m|h|d)?"
-    );
-    assert_eq!(
-        ParseDurationError::UnsupportedUnit {
-            unit: "fortnights".to_string(),
-        }
-        .to_string(),
-        "unsupported duration unit `fortnights`"
-    );
-    assert_eq!(
-        ParseDurationError::OutOfRange.to_string(),
-        "duration value is out of range"
-    );
-}
-
+/// Verifies the direct serializer emits exact unit-suffixed text.
 #[test]
 fn test_duration_with_unit_serialize_function() {
     let mut buf = Vec::new();
@@ -338,14 +297,15 @@ fn test_duration_with_unit_serialize_function() {
     );
 }
 
+/// Verifies exact Duration text round-trips through postcard.
 #[test]
 fn test_duration_with_unit_postcard_round_trip() {
-    let holder = Holder {
+    let holder = DurationWithUnitHolder {
         duration: Duration::from_nanos(42),
     };
     let bytes =
         postcard::to_stdvec(&holder).expect("duration should serialize");
-    let decoded: Holder =
+    let decoded: DurationWithUnitHolder =
         postcard::from_bytes(&bytes).expect("duration should deserialize");
 
     assert_eq!(decoded, holder);
